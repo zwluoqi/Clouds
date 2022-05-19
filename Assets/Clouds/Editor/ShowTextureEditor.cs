@@ -1,5 +1,8 @@
+using System.IO;
 using UnityEditor;
 using UnityEngine;
+using UnityTools.MeshTools;
+using UnityTools.TextureTools;
 
 namespace Clouds
 {
@@ -21,7 +24,10 @@ namespace Clouds
             
             if (GUILayout.Button("生成图片"))
             {
-                (target as ShowTexture).GenerateTexture();
+                var textureSetting= (target as ShowTexture).textureSetting;
+                var texture = GenerateTexture.Generate(textureSetting);
+                File.WriteAllBytes("Assets/"+textureSetting.name+".png",texture.EncodeToPNG());
+                AssetDatabase.Refresh();
             }
         }
         

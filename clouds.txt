@@ -1,0 +1,21 @@
+1 R(v,sourceLeft,sourceRight,targetLeft,targetRight) remap value
+2 SAT(v) clamp value
+3 L(v0,v1,v) lerp
+4 WM = max(wc0,STA(gc-0.5)*wc1*2) 云出现率
+5 SRb = SAT(R(ph, 0, 0.07, 0, 1)) 向下映射
+6 SRt = SAT(R(ph, wh ×0.2, wh, 1, 0)) 向上映射
+7 SA = SRb × SRt 
+8 DRb = ph ×SAT(R(ph, 0, 0.15, 0, 1)) 向底部降低密度
+9 DRt = SAT(R(ph, 0.9, 1.0, 1, 0))) 向顶部的更柔和的过渡降低密度
+10 DA = gd × DRb × DRt × wd × 2 密度融合
+
+scalar probabilities
+ global coverage term gc [0,1]
+ global density term gd [0,max]
+
+weather-map
+    R(wc0) G(wc1) coverage ,
+    wh cloud height
+    wd cloud density
+
+ph[0,1] 当前点云中高度百分比
