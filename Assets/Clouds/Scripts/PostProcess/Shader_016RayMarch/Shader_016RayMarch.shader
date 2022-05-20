@@ -52,9 +52,6 @@ Shader "Shader/Shader_016RayMarch"
               float sceneDepth =  LinearEyeDepth(deviceDepth,_ZBufferParams)*0.001;
               return float4(sceneDepth,sceneDepth,sceneDepth,1);
             }
-
-            
-
                 
             half4 FragBlurH(Varyings input) : SV_Target
             {
@@ -64,11 +61,17 @@ Shader "Shader/Shader_016RayMarch"
               float deviceDepth = SAMPLE_DEPTH_TEXTURE(_CameraDepthTexture, sampler_CameraDepthTexture, ndcPos.xy);                
               float3 colorWorldPos = ComputeWorldSpacePosition(ndcPos.xy, deviceDepth, UNITY_MATRIX_I_VP);
 
-                #ifdef DEBUG_SHAPE_NOSE
-                float4 rgba = SAMPLE_TEXTURE3D_LOD(shapeNoise, sampler_shapeNoise, float3(ndcPos.xy,debug_shape_z),0);
-                return rgba.r;
-                #endif
-                float4 col = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex,ndcPos.xy);
+            #ifdef DEBUG_SHAPE_NOSE
+            float4 rgba = SAMPLE_TEXTURE3D_LOD(shapeNoise, sampler_shapeNoise, float3(ndcPos.xy,debug_shape_z),0);
+                if (debug_rgba<4){
+            return rgba[debug_rgba];
+                    }else
+                    {
+                        return rgba;
+                    }
+            #endif
+                
+            
 
 
              
@@ -79,29 +82,47 @@ Shader "Shader/Shader_016RayMarch"
               float rayDst = min(distToBox.y,length(cameraToPosDir)-distToBox.x);
 
 
-              float totalDensity = 0;
-              if(rayDst>0){
-                  float NumSteps = 100.0f;
-                  // float3 rayPos = _WorldSpaceCameraPos.xyz + rayDir*(distToBox.x);
-                  float stepDst = rayDst/NumSteps;
-                  
-                  
+              float totalLightTransmittance = 0;
+              float lightEnergy = 0;
+              float transmittance = 1;
+              if(rayDst>0.01f){
+
+                  float stepDst = rayDst/numberStepCloud;
                   float rayDstAdd = 0;
-                  float stepVal = 0.0;
-                  while (stepVal < NumSteps)
+                  float3 hitPoint = _WorldSpaceCameraPos.xyz + rayDir*(distToBox.x);
+
+                  float curStep=0.0;
+                  while (curStep<numberStepCloud)
                   {
-                      float3 rayPos = _WorldSpaceCameraPos.xyz + rayDir*(distToBox.x+rayDstAdd);
-                  
-                      totalDensity += sampleDensity(rayPos)*stepDst;
-                  
+                      float3 rayPos = hitPoint + rayDir*(stepDst)*(curStep);
+                      float density = sampleDensity(rayPos);
+                      if(density > 0.01f )
+                      {
+                          float lightTransmittance = lightMarching(rayPos);
+                          // return lightTransmittance;
+                          lightEnergy += (density * stepDst * transmittance * lightTransmittance*lightPhaseValue);
+                          transmittance *= (exp(-density*stepDst*lightAbsorptionThroughCloud));
+                          // if(transmittance < 0.001)
+                          // {
+                          //     break;
+                          // }  
+                      }
                       rayDstAdd += stepDst;
-                      stepVal += 1.0f;
+                      curStep +=1.0;;
                   }
+                  // return float4(0,lightEnergy,0,1);
 
                }
+                // return lightEnergy;
 
-              float transmittance = exp(-totalDensity);
-              return transmittance*col;
+                // return totalLightTransmittance;
+                // return lightEnergy;
+                // Add Cloud To background
+              //
+              float4 backgroundCol = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex,ndcPos.xy);
+              float4 cloudCol = lightEnergy*_MainLightColor;
+              // float transmittance = exp(-totalDensity);
+              return float4(backgroundCol.rgb*transmittance + cloudCol.rgb,1);
             }
 
     

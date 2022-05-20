@@ -1,6 +1,10 @@
 #ifndef QINGZHU_CLOUDS
 #define QINGZHU_CLOUDS
 #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/Common.hlsl"
+#include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
+
+#include "Assets/ShaderLabs/Shaders/RayMarchingIntersection.hlsl"
+
 
 TEXTURE3D(shapeNoise);
 SAMPLER(sampler_shapeNoise);
@@ -18,11 +22,24 @@ float3 boxmax;
 float samplerScale;
 float3 samplerOffset;
 float densityMultipler;
-float densityThreshold;
+float densityThreshold;//云层密度阀值
+float numberStepCloud;//云层密度检测步进
+
+float lightPhaseValue;//光线穿透能力
+float lightAbsorptionThroughCloud;//云层对光的吸收率
+float4 _LightCol;//光颜色
+
+
+float numberStepLight;//管线传播步进
+float lightAbsorptionTowardSun;//云层对光的吸收率
+float darknessThreshold;//最低光线穿透阀值
 
 float globalCoverage;
 
+
+
 float debug_shape_z;
+float debug_rgba;
 CBUFFER_END
 
 
@@ -48,6 +65,36 @@ float sampleDensity(float3 worldpos)
     float density = max(0,wc0-densityThreshold)*densityMultipler;
     // float density = max(wc0,SAT(globalCoverage-0.5)*wc1*2)*densityMultipler;
     return density;
+}
+
+float lightMarching(float3 rayPos)
+{
+    
+    float3 dir = _MainLightPosition.xyz;
+    
+    float3 dirToLight = normalize(dir.xyz);
+    
+    float distInsideBox = RayBoxIntersection(rayPos,dirToLight,boxmin,boxmax).y;
+    // return exp(distInsideBox);
+    // if (distInsideBox<=0.001)
+    // {
+    //     return 1;
+    // }
+    // 
+    float stepSize = distInsideBox/numberStepCloud;
+    float totalDensity = 0;
+    for (int step = 0;step <numberStepLight;step++)
+    {
+        rayPos += dirToLight*stepSize;
+        float density = sampleDensity(rayPos);
+        totalDensity += density*stepSize;
+    }
+    // return totalDensity;
+
+    //密度越大,穿透率越低
+    float transmittance = exp(-totalDensity*lightAbsorptionTowardSun);
+    
+    return darknessThreshold + transmittance*(1-darknessThreshold);
 }
 
 

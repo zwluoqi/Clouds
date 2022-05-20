@@ -132,9 +132,25 @@ public class Shader_016RayMarchSRF : ScriptableRendererFeature
                 cmd.SetGlobalFloat("globalCoverage",box.globalCoverage);
                 cmd.SetGlobalFloat("densityMultipler",box.densityMultipler);
                 cmd.SetGlobalFloat("densityThreshold",box.densityThreshold);
+                cmd.SetGlobalFloat("numberStepCloud",box.numberStepCloud);
+                
+                
+                cmd.SetGlobalFloat("lightPhaseValue",box.lightPhaseValue);
+                cmd.SetGlobalFloat("lightAbsorptionThroughCloud",box.lightAbsorptionThroughCloud);
+                cmd.SetGlobalColor("_LightCol",box._LightCol);
+                
+                
+                cmd.SetGlobalFloat("lightAbsorptionTowardSun",box.lightAbsorptionTowardSun);
+                cmd.SetGlobalFloat("darknessThreshold",box.darknessThreshold);
+                cmd.SetGlobalFloat("numberStepLight",box.numberStepLight);
+                
+                
+                
                 
                 cmd.SetGlobalTexture("shapeNoise",box.textureShape);
                 cmd.SetGlobalFloat("debug_shape_z",box.debug_shape_z);
+                cmd.SetGlobalInt("debug_rgba",(int)box.debug_rgba);
+                
                 if (box.debug_shape_noise)
                 {
                     _material.EnableKeyword("DEBUG_SHAPE_NOSE");
