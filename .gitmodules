@@ -1,3 +1,6 @@
 [submodule "Assets/UnityTools"]
 	path = Assets/UnityTools
 	url = git@github.com:zwluoqi/UnityTools.git
+[submodule "Assets/ShaderLabs"]
+	path = Assets/ShaderLabs
+	url = git@github.com:zwluoqi/ShaderLabs.git

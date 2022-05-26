@@ -88,7 +88,7 @@ Shader "Shader/Shader_016RayMarch"
               if(rayDst>0.01f){
 
                   float stepDst = rayDst/numberStepCloud;
-                  float rayDstAdd = 0;
+
                   float3 hitPoint = _WorldSpaceCameraPos.xyz + rayDir*(distToBox.x);
 
                   float curStep=0.0;
@@ -99,24 +99,19 @@ Shader "Shader/Shader_016RayMarch"
                       if(density > 0.01f )
                       {
                           float lightTransmittance = lightMarching(rayPos);
-                          // return lightTransmittance;
+                          totalLightTransmittance += lightTransmittance;
+
                           lightEnergy += (density * stepDst * transmittance * lightTransmittance*lightPhaseValue);
                           transmittance *= (exp(-density*stepDst*lightAbsorptionThroughCloud));
-                          // if(transmittance < 0.001)
-                          // {
-                          //     break;
-                          // }  
+                          if(transmittance < 0.001)
+                          {
+                              break;
+                          }
                       }
-                      rayDstAdd += stepDst;
                       curStep +=1.0;;
                   }
-                  // return float4(0,lightEnergy,0,1);
-
                }
-                // return lightEnergy;
 
-                // return totalLightTransmittance;
-                // return lightEnergy;
                 // Add Cloud To background
               //
               float4 backgroundCol = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex,ndcPos.xy);

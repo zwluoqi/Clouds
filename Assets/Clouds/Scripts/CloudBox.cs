@@ -18,7 +18,7 @@ namespace Clouds
 
         public Texture3D textureShape;
 
-        [Range(2,128)]
+        [Range(1,128)]
         [Tooltip("云层光线步进数量")]
         public int numberStepCloud = 100;
         [Min(0.01f)]
@@ -36,7 +36,7 @@ namespace Clouds
         [Range(0.01f,1.0f)]
         [Tooltip("最低光线穿透阀值")]
         public float darknessThreshold = 0.01f;
-        [Range(2,128)]
+        [Range(1,128)]
         [Tooltip("太阳光线步进数量")]
         public int numberStepLight = 100;
         
