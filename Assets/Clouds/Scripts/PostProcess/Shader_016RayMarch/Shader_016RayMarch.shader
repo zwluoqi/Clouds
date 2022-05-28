@@ -75,7 +75,7 @@ Shader "Shader/Shader_016RayMarch"
               return float4(sceneDepth,sceneDepth,sceneDepth,1);
             }
                 
-            half4 FragBlurH(Varyings input) : SV_Target
+            half4 FragCloud(Varyings input) : SV_Target
             {
 
                 
@@ -111,6 +111,7 @@ Shader "Shader/Shader_016RayMarch"
 
               float distToBoxHit = min(distToOuter.x,distToInner.x);
               float rayDst = min(distToInner.x- distToOuter.x,distToOuter.y-distToInner.y);
+                rayDst = min(rayDst,length(cameraToPosDir)-distToBoxHit);
                 //TODO 采样时转到球面坐标采样更加合理
                 #else
                 return float4(0,0,0,1);
@@ -147,13 +148,18 @@ Shader "Shader/Shader_016RayMarch"
 
                 // Add Cloud To background
               //
-              float4 backgroundCol = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex,ndcPos.xy);
+              // float4 backgroundCol = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex,ndcPos.xy);
               float4 cloudCol = lightEnergy*_MainLightColor;
-              // float transmittance = exp(-totalDensity);
-              return float4(backgroundCol.rgb*transmittance + cloudCol.rgb,1);
+
+              return float4(cloudCol.rgb,transmittance);
             }
 
-    
+            half4 FragBlend(Varyings input) : SV_Target{
+                float4 ndcPos = (input.screenPos / input.screenPos.w);
+                float4 backgroundCol = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex,ndcPos.xy);
+                float4 cloudCol = SAMPLE_TEXTURE2D(_CloudTex, sampler_CloudTex,ndcPos.xy);
+                return float4(backgroundCol.xyz*cloudCol.a+cloudCol.xyz,1);
+            }
             
     ENDHLSL
     
@@ -162,16 +168,27 @@ Shader "Shader/Shader_016RayMarch"
         Tags { "RenderType"="TransParent" "Queue" = "TransParent"}
         LOD 100
 
-        Blend One Zero
         ZWrite Off
         ZTest LEqual
         Cull Off
         
         Pass
-        {            
+        {        
+            Blend One Zero
+    
             HLSLPROGRAM
             #pragma vertex FullscreenVert
-            #pragma fragment FragBlurH           
+            #pragma fragment FragCloud           
+            ENDHLSL
+        }
+
+        Pass
+        {        
+            Blend One Zero
+    
+            HLSLPROGRAM
+            #pragma vertex FullscreenVert
+            #pragma fragment FragBlend           
             ENDHLSL
         }
     }

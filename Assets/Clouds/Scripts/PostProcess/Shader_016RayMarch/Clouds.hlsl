@@ -11,7 +11,9 @@ SAMPLER(sampler_shapeNoise);
 
 TEXTURE2D(_MainTex);
 SAMPLER(sampler_MainTex);
-           
+
+TEXTURE2D(_CloudTex);
+SAMPLER(sampler_CloudTex);
 
 
 // CBUFFER_START(UnityPerMaterial) // Required to be compatible with SRP Batcher
@@ -48,24 +50,88 @@ float SAT(float v)
     return clamp(0,1,v);
 }
 
-float sampleDensity(float3 worldpos)
+float remap(float v,float l0,float h0,float ln,float hn)
 {
-    float3 texCoord = worldpos*samplerScale*0.001+samplerOffset*0.01;
+    return ln+(v-l0)*(hn-ln)/(h0-l0);
+}
+
+
+float sampleDensityBox(float3 worldPos)
+{
+    float3 texCoord = worldPos*samplerScale*0.001+samplerOffset*0.01;
     float4 rgba = SAMPLE_TEXTURE3D_LOD(shapeNoise, sampler_shapeNoise, texCoord,0);
 
+    float3 size = boxmax - boxmin;
     float wc0=rgba.r;
     float wc1=rgba.g;
     float wh=rgba.b;
     float wd=rgba.a;
     
-    // R(wc0) G(wc1) coverage ,
-    // B(wh) cloud height
-    // A(wd) cloud density
-    // 4 WM = max(wc0,STA(gc-0.5)*wc1*2) 云出现率
+    
+    float gMin = .2;
+    float gMax = .7;
+    float heightPercent = (worldPos.y - boxmin.y) / size.y;
+    
+    float heightGradient = saturate(remap(heightPercent, 0.0, gMin, 0, 1))
+    * saturate(remap(heightPercent, 1, gMax, 0, 1));
+    // heightGradient *= edgeWeight;
+    
     float density = max(0,wc0-densityThreshold)*densityMultipler;
-    // float density = max(wc0,SAT(globalCoverage-0.5)*wc1*2)*densityMultipler;
-    return density;
+
+    
+    return density*heightGradient;
 }
+
+
+float sampleDensitySphere(float3 worldPos)
+{
+    float3 texCoord = worldPos*samplerScale*0.001+samplerOffset*0.01;
+    float4 rgba = SAMPLE_TEXTURE3D_LOD(shapeNoise, sampler_shapeNoise, texCoord,0);
+
+    float3 size = boxmax - boxmin;
+    float height = length(worldPos-sphereCenter);
+
+    float wc0=rgba.r;
+    float wc1=rgba.g;
+    float wh=rgba.b;
+    float wd=rgba.a;
+
+    
+    float heightPercent =saturate( (height - boxmin.x-size.x*0.5) / (size.x*0.5) );
+    
+
+//     5 SRb = SAT(R(ph, 0, 0.07, 0, 1)) 向下映射<br>
+//     6 SRt = SAT(R(ph, wh ×0.2, wh, 1, 0)) 向上映射<br>
+//     7 SA = SRb × SRt <br>
+    float SRb = SAT(remap(heightPercent, 0, 0.07, 0, 1));
+    float SRt = SAT(remap(heightPercent, 1*0.2, 1, 1, 0));
+    float SA = SRb*SRt;
+    
+    // 8 DRb = ph ×SAT(R(ph, 0, 0.15, 0, 1)) 向底部降低密度<br>
+    // 9 DRt = SAT(R(ph, 0.9, 1.0, 1, 0))) 向顶部的更柔和的过渡降低密度<br>
+    // 10 DA = gd × DRb × DRt × wd × 2 密度融合<br>
+    float DRb = SAT(remap(heightPercent, 0,  0.15, 0, 1));
+    float DRt = SAT(remap(heightPercent, 0.9, 1, 1, 0));
+    float DA = 0.5*SRb*SRt*1*2;
+
+    float density = max(0,wc0-densityThreshold)*densityMultipler;
+
+    return density*SA*DA;
+}
+
+
+
+float sampleDensity(float3 worldpos)
+{
+    #if SHAPE_BOX
+    return sampleDensityBox(worldpos);
+    #elif SHAPE_SPHERE
+    return sampleDensitySphere(worldpos);
+    #else
+    return 0;
+    #endif
+}
+
 
 float lightMarching(float3 rayPos)
 {

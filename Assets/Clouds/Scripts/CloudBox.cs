@@ -26,7 +26,7 @@ namespace Clouds
 
         public Texture3D textureShape;
 
-        [Range(1,128)]
+        [Range(1,256)]
         [Tooltip("云层光线步进数量")]
         public int numberStepCloud = 100;
         [Min(0.01f)]

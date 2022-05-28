@@ -18,6 +18,8 @@ public class Shader_016RayMarchSRF : ScriptableRendererFeature
 
         private static readonly int MainTexId = Shader.PropertyToID("_MainTex");
         private static readonly int TmpTexId = Shader.PropertyToID("_TmpTex");
+        private static readonly int TmpTexId2 = Shader.PropertyToID("_TmpTex2");
+        // private static readonly int TmpTexId3 = Shader.PropertyToID("_TmpTex3");
         //
         // private static readonly int boxminId = Shader.PropertyToID("boxmin");
         // private static readonly int boxmaxId = Shader.PropertyToID("boxmax");
@@ -90,8 +92,9 @@ public class Shader_016RayMarchSRF : ScriptableRendererFeature
             var h = renderingData.cameraData.camera.scaledPixelHeight;
             
             var soruce = _renderTargetIdentifier;
-            cmd.GetTemporaryRT(TmpTexId,w,h,0,FilterMode.Point, RenderTextureFormat.Default);
-
+            cmd.GetTemporaryRT(TmpTexId,w/2,h/2,0,FilterMode.Point, RenderTextureFormat.Default);
+            cmd.GetTemporaryRT(TmpTexId2,w,h,0,FilterMode.Point, RenderTextureFormat.Default);
+            // cmd.GetTemporaryRT(TmpTexId3,w,h,0,FilterMode.Point, RenderTextureFormat.Default);
             
             for (int i = 0; i < cloudBoxes.Length; i++)
             {
@@ -165,10 +168,13 @@ public class Shader_016RayMarchSRF : ScriptableRendererFeature
                     cmd.SetGlobalVector("boxmax", new Vector4(raidu1,0,0,0));
                     cmd.SetGlobalVector("sphereCenter", boxcenter);
                 }
-                cmd.SetGlobalTexture(MainTexId,soruce);
-                cmd.Blit(soruce,TmpTexId);
-                cmd.Blit(TmpTexId,soruce,_material,0);
                 
+
+                cmd.Blit(null,TmpTexId,_material,0);
+                cmd.SetGlobalTexture(MainTexId,soruce);
+                cmd.SetGlobalTexture("_CloudTex",TmpTexId);
+                cmd.Blit(soruce,TmpTexId2,_material,1);
+                cmd.Blit(TmpTexId2, soruce);
             }
             context.ExecuteCommandBuffer(cmd);
 
