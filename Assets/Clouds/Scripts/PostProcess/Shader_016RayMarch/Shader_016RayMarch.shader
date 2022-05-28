@@ -3,8 +3,29 @@ Shader "Shader/Shader_016RayMarch"
 {
     Properties
     {
-        _MainTex ("Texture", 2D) = "white" {}
-        shapeNoise ("shapeNoise", 3D) = "white" {}
+//        _MainTex ("Texture", 2D) = "white" {}
+//        shapeNoise ("shapeNoise", 3D) = "white" {}
+
+
+//        boxmin("boxmin",vector)=(0,0,0,0)
+//        boxmax("boxmax",vector)=(1,1,1,0)        
+//
+//        samplerScale("samplerScale",float) = 1
+//        samplerOffset("samplerOffset",vector) = (0,0,0,0)
+//        densityMultipler("densityMultipler",float) = 1
+//        densityThreshold("densityThreshold",float) = 1
+//        numberStepCloud("numberStepCloud",int) = 1
+//        
+//        lightPhaseValue("lightPhaseValue",float) = 1
+//        lightAbsorptionThroughCloud("lightAbsorptionThroughCloud",float) = 1
+//        
+//        numberStepLight("numberStepLight",int) = 1
+//        lightAbsorptionTowardSun("lightAbsorptionTowardSun",float) = 1
+//        darknessThreshold("darknessThreshold",float) = 1
+//
+//        globalCoverage("globalCoverage",float) = 1
+//        debug_shape_z("debug_shape_z",float) = 1
+//        debug_rgba("debug_rgba",vector) = (1,1,1,1)
     }
     
     HLSLINCLUDE
@@ -16,6 +37,7 @@ Shader "Shader/Shader_016RayMarch"
     #include "Clouds.hlsl"
 
         #pragma multi_compile _ DEBUG_SHAPE_NOSE
+        #pragma multi_compile SHAPE_BOX SHAPE_SPHERE 
             
             struct Attributes
             {
@@ -78,8 +100,21 @@ Shader "Shader/Shader_016RayMarch"
               float3 cameraToPosDir = colorWorldPos - _WorldSpaceCameraPos.xyz;
               float3 rayDir = normalize(cameraToPosDir);
 
+                #ifdef SHAPE_BOX
               float2 distToBox = RayBoxIntersection(_WorldSpaceCameraPos.xyz,rayDir,boxmin,boxmax);
               float rayDst = min(distToBox.y,length(cameraToPosDir)-distToBox.x);
+              float distToBoxHit = distToBox.x;
+                #elif  SHAPE_SPHERE
+              float2 distToOuter = RaySphereIntersection(sphereCenter.xyz,boxmax.x,_WorldSpaceCameraPos.xyz,rayDir);
+              float2 distToInner = RaySphereIntersection(sphereCenter.xyz,boxmin.x,_WorldSpaceCameraPos.xyz,rayDir);
+              float3 dirToCenter = (sphereCenter.xyz - _WorldSpaceCameraPos);
+
+              float distToBoxHit = min(distToOuter.x,distToInner.x);
+              float rayDst = min(distToInner.x- distToOuter.x,distToOuter.y-distToInner.y);
+                //TODO 采样时转到球面坐标采样更加合理
+                #else
+                return float4(0,0,0,1);
+                #endif
 
 
               float totalLightTransmittance = 0;
@@ -89,12 +124,11 @@ Shader "Shader/Shader_016RayMarch"
 
                   float stepDst = rayDst/numberStepCloud;
 
-                  float3 hitPoint = _WorldSpaceCameraPos.xyz + rayDir*(distToBox.x);
+                  float3 hitPoint = _WorldSpaceCameraPos.xyz + rayDir*(distToBoxHit);
 
-                  float curStep=0.0;
-                  while (curStep<numberStepCloud)
+                  for (int step = 0;step <numberStepCloud;step++)
                   {
-                      float3 rayPos = hitPoint + rayDir*(stepDst)*(curStep);
+                      float3 rayPos = hitPoint + rayDir*(stepDst)*(step);
                       float density = sampleDensity(rayPos);
                       if(density > 0.01f )
                       {
@@ -108,7 +142,6 @@ Shader "Shader/Shader_016RayMarch"
                               break;
                           }
                       }
-                      curStep +=1.0;;
                   }
                }
 

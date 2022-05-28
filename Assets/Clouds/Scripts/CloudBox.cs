@@ -4,6 +4,14 @@ namespace Clouds
 {
     public class CloudBox:MonoBehaviour
     {
+        public enum CloudShape
+        {
+            BOX,
+            SPHERE,
+        }
+
+        public CloudShape cloudShape = CloudShape.BOX;
+        
         [Min(0.01f)]
         public float samplerScale = 1;
 
@@ -27,7 +35,6 @@ namespace Clouds
         [Min(0.01f)]
         [Tooltip("摄像机射向云层使对光线吸收率")]
         public float lightAbsorptionThroughCloud = 1;
-        public Color _LightCol = Color.white;
 
         
         [Tooltip("光源射向云层使对光线吸收率")]

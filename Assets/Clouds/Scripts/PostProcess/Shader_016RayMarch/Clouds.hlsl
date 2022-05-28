@@ -1,7 +1,7 @@
 #ifndef QINGZHU_CLOUDS
 #define QINGZHU_CLOUDS
-#include "Packages/com.unity.render-pipelines.core/ShaderLibrary/Common.hlsl"
-#include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
+// #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/Common.hlsl"
+// #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
 
 #include "Assets/ShaderLabs/Shaders/RayMarchingIntersection.hlsl"
 
@@ -14,23 +14,23 @@ SAMPLER(sampler_MainTex);
            
 
 
-CBUFFER_START(UnityPerMaterial) // Required to be compatible with SRP Batcher
+// CBUFFER_START(UnityPerMaterial) // Required to be compatible with SRP Batcher
 float4 _MainTex_ST;
-float3 boxmin;
-float3 boxmax;
+float4 sphereCenter;
+float4 boxmin;
+float4 boxmax;
 
 float samplerScale;
-float3 samplerOffset;
+float4 samplerOffset;
 float densityMultipler;
 float densityThreshold;//云层密度阀值
-float numberStepCloud;//云层密度检测步进
+int numberStepCloud;//云层密度检测步进
 
 float lightPhaseValue;//光线穿透能力
 float lightAbsorptionThroughCloud;//云层对光的吸收率
-float4 _LightCol;//光颜色
 
 
-float numberStepLight;//管线传播步进
+int numberStepLight;//管线传播步进
 float lightAbsorptionTowardSun;//云层对光的吸收率
 float darknessThreshold;//最低光线穿透阀值
 
@@ -40,7 +40,7 @@ float globalCoverage;
 
 float debug_shape_z;
 float debug_rgba;
-CBUFFER_END
+// CBUFFER_END
 
 
 float SAT(float v)
@@ -69,7 +69,7 @@ float sampleDensity(float3 worldpos)
 
 float lightMarching(float3 rayPos)
 {
-    
+    // return 0.0f;
     float3 dir = _MainLightPosition.xyz;
     
     float3 dirToLight = normalize(dir.xyz);
@@ -81,7 +81,7 @@ float lightMarching(float3 rayPos)
     //     return 1;
     // }
     // 
-    float stepSize = distInsideBox/numberStepCloud;
+    float stepSize = distInsideBox/numberStepLight;
     float totalDensity = 0;
     for (int step = 0;step <numberStepLight;step++)
     {

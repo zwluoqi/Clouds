@@ -106,43 +106,28 @@ public class Shader_016RayMarchSRF : ScriptableRendererFeature
                 // {
                 //     continue;
                 // }
-                // cmd.SetGlobalVector(centerPos,planetMesh.transform.position);
-                // cmd.SetGlobalFloat(radius,planetMesh.ShapeSettting.radius);
-                // cmd.SetGlobalFloat(_alphaMultiplier,planetMesh.WaterRenderSettting.alphaMultiplier);
-                // cmd.SetGlobalFloat(_colorMultiplier,planetMesh.WaterRenderSettting.colorMultiplier);
-                // cmd.SetGlobalFloat(_fogMultiplier,planetMesh.WaterRenderSettting.fogMultiplier);
-                //
-                // cmd.SetGlobalFloat(_waterSmoothness,planetMesh.WaterRenderSettting.waterSmoothness);
-                //
-                // cmd.SetGlobalColor(depthColor,planetMesh.ColorSettting.ocean.Evaluate(0));
-                // cmd.SetGlobalColor(surfaceColor,planetMesh.ColorSettting.ocean.Evaluate(1));
-                //
-                // cmd.SetGlobalFloat(waveLen,planetMesh.WaterRenderSettting.waterLayers.Length);
-                // cmd.SetGlobalVectorArray(waves,planetMesh.WaterRenderSettting.ToWaveVec4s());
                 var transform = box.transform;
                 Vector3 boxcenter = transform.position;
                 var localScale = transform.localScale;
-                Vector3 boxmin = boxcenter - localScale*0.5f;
-                Vector3 boxmax = boxcenter + localScale*0.5f;
 
-                cmd.SetGlobalVector("boxmin", boxmin);
-                cmd.SetGlobalVector("boxmax", boxmax);
+
+                
+                
                 cmd.SetGlobalFloat("samplerScale",box.samplerScale);
                 cmd.SetGlobalVector("samplerOffset",box.samplerOffset);
                 cmd.SetGlobalFloat("globalCoverage",box.globalCoverage);
                 cmd.SetGlobalFloat("densityMultipler",box.densityMultipler);
                 cmd.SetGlobalFloat("densityThreshold",box.densityThreshold);
-                cmd.SetGlobalFloat("numberStepCloud",box.numberStepCloud);
+                cmd.SetGlobalInt("numberStepCloud",box.numberStepCloud);
                 
                 
                 cmd.SetGlobalFloat("lightPhaseValue",box.lightPhaseValue);
                 cmd.SetGlobalFloat("lightAbsorptionThroughCloud",box.lightAbsorptionThroughCloud);
-                cmd.SetGlobalColor("_LightCol",box._LightCol);
                 
                 
                 cmd.SetGlobalFloat("lightAbsorptionTowardSun",box.lightAbsorptionTowardSun);
                 cmd.SetGlobalFloat("darknessThreshold",box.darknessThreshold);
-                cmd.SetGlobalFloat("numberStepLight",box.numberStepLight);
+                cmd.SetGlobalInt("numberStepLight",box.numberStepLight);
                 
                 
                 
@@ -153,13 +138,33 @@ public class Shader_016RayMarchSRF : ScriptableRendererFeature
                 
                 if (box.debug_shape_noise)
                 {
-                    _material.EnableKeyword("DEBUG_SHAPE_NOSE");
+                    cmd.EnableShaderKeyword("DEBUG_SHAPE_NOSE");
                 }
                 else
                 {
-                    _material.DisableKeyword("DEBUG_SHAPE_NOSE");
+                    cmd.DisableShaderKeyword("DEBUG_SHAPE_NOSE");
                 }
 
+                if (box.cloudShape == CloudBox.CloudShape.BOX)
+                {
+                    EnableShapeKeyWord(cmd,"SHAPE_BOX");
+                    
+                    Vector3 boxmin = boxcenter - localScale*0.5f;
+                    Vector3 boxmax = boxcenter + localScale*0.5f;
+                    cmd.SetGlobalVector("boxmin", boxmin);
+                    cmd.SetGlobalVector("boxmax", boxmax);
+                }
+                else
+                {
+                    EnableShapeKeyWord(cmd,"SHAPE_SPHERE");
+
+                    float raidu0 = localScale.x*0.5f;
+                    float raidu1 = raidu0 * 1.1f;
+                    
+                    cmd.SetGlobalVector("boxmin", new Vector4(raidu0,0,0,0));
+                    cmd.SetGlobalVector("boxmax", new Vector4(raidu1,0,0,0));
+                    cmd.SetGlobalVector("sphereCenter", boxcenter);
+                }
                 cmd.SetGlobalTexture(MainTexId,soruce);
                 cmd.Blit(soruce,TmpTexId);
                 cmd.Blit(TmpTexId,soruce,_material,0);
@@ -171,6 +176,12 @@ public class Shader_016RayMarchSRF : ScriptableRendererFeature
 
         }
 
+        private void EnableShapeKeyWord(CommandBuffer cmd,string shapeBox)
+        {
+            cmd.DisableShaderKeyword("SHAPE_BOX");
+            cmd.DisableShaderKeyword("SHAPE_SPHERE");
+            cmd.EnableShaderKeyword(shapeBox);
+        }
 
 
         private void CreateMaterial(string shaderName)
