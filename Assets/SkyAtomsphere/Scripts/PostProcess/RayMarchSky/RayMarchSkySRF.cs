@@ -1,17 +1,18 @@
 using System;
 using Clouds;
+using Unity.Mathematics;
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 using Object = UnityEngine.Object;
 
-public class RayMarchCloudSRF : ScriptableRendererFeature
+public class RayMarchSkySRF : ScriptableRendererFeature
 {
-    class RayMarchCloudPass : ScriptableRenderPass
+    class RayMarchSkyPass : ScriptableRenderPass
     {
 
-        public static string k_RenderTag = "RayMarchCloud";
-        static string shaderName = "Shader/RayMarchCloud";
+        public static string k_RenderTag = "RayMarchSky";
+        static string shaderName = "Shader/RayMarchSky";
 
         private RenderTargetIdentifier _renderTargetIdentifier;
         private Material _material;
@@ -21,7 +22,7 @@ public class RayMarchCloudSRF : ScriptableRendererFeature
         private static readonly int TmpTexId2 = Shader.PropertyToID("_TmpTex2");
         
 
-        public RayMarchCloudPass()
+        public RayMarchSkyPass()
         {
             
         }
@@ -52,8 +53,8 @@ public class RayMarchCloudSRF : ScriptableRendererFeature
         public override void Execute(ScriptableRenderContext context, ref RenderingData renderingData)
         {
 
-            CloudBox[] cloudBoxes = Object.FindObjectsOfType<CloudBox>();
-            if (cloudBoxes.Length == 0)
+            SkySphere[] skySpheres = Object.FindObjectsOfType<SkySphere>();
+            if (skySpheres.Length == 0)
             {
                 return;
             }
@@ -74,99 +75,48 @@ public class RayMarchCloudSRF : ScriptableRendererFeature
             cmd.GetTemporaryRT(TmpTexId2,w,h,0,FilterMode.Point, RenderTextureFormat.Default);
             // cmd.GetTemporaryRT(TmpTexId3,w,h,0,FilterMode.Point, RenderTextureFormat.Default);
             
-            for (int i = 0; i < cloudBoxes.Length; i++)
+            for (int i = 0; i < skySpheres.Length; i++)
             {
-                var box = cloudBoxes[i];
-                if (!box.enabled)
+                var sky = skySpheres[i];
+                if (!sky.enabled)
                 {
                     return;
                 }
-                var transform = box.transform;
+                var transform = sky.transform;
                 Vector3 boxcenter = transform.position;
                 var localScale = transform.localScale;
 
 
+                cmd.SetGlobalFloat("atomDensityFalloff",sky.atomDensityFalloff);
+                cmd.SetGlobalFloat("lightPhaseValue",sky.lightPhaseValue);
+                
+                cmd.SetGlobalInt("numberStepSky",sky.numberStepSky);
                 
                 
-                cmd.SetGlobalFloat("samplerScale",box.samplerScale);
-                cmd.SetGlobalVector("samplerOffset",box.samplerOffset);
-                cmd.SetGlobalFloat("globalCoverage",box.globalCoverage);
-                cmd.SetGlobalFloat("globalDensity",box.globalDensity);
-                cmd.SetGlobalFloat("globalThickness",box.globalThickness);
+                cmd.SetGlobalFloat("lightAbsorptionTowardSun",sky.lightAbsorptionTowardSun);
+                cmd.SetGlobalFloat("darknessThreshold",sky.darknessThreshold);
+                cmd.SetGlobalInt("numberStepLight",sky.numberStepLight);
                 
                 
-                cmd.SetGlobalFloat("densityMultipler",box.densityMultipler);
-                cmd.SetGlobalFloat("densityThreshold",box.densityThreshold);
-                cmd.SetGlobalInt("numberStepCloud",box.numberStepCloud);
-                
-                
-                cmd.SetGlobalFloat("lightPhaseStrength",box.lightPhaseStrength);
-                cmd.SetGlobalFloat("lightPhaseIns",box.lightPhaseIns);
-                cmd.SetGlobalFloat("lightPhaseOuts",box.lightPhaseOuts);
-                cmd.SetGlobalFloat("lightPhaseBlend",box.lightPhaseBlend);
-                
-                cmd.SetGlobalFloat("lightPhaseCsi",box.lightPhaseCsi);
-                cmd.SetGlobalFloat("lightPhaseCse",box.lightPhaseCse);
-                
-                
-                
-                cmd.SetGlobalFloat("lightAbsorptionThroughCloud",box.lightAbsorptionThroughCloud);
-                
-                
-                cmd.SetGlobalFloat("lightAbsorptionTowardSun",box.lightAbsorptionTowardSun);
-                cmd.SetGlobalFloat("darknessThreshold",box.darknessThreshold);
-                cmd.SetGlobalInt("numberStepLight",box.numberStepLight);
-                
-                
-                
-                
-                cmd.SetGlobalTexture("shapeNoise",box.textureShape);
-                cmd.SetGlobalTexture("detailNoise",box.detailShape);
-                cmd.SetGlobalTexture("weatherMap",box.weatherMap);
-                
-        
-                cmd.SetGlobalFloat("debug_shape_z",box.debug_shape_z);
-                cmd.SetGlobalInt("debug_rgba",(int)box.debug_rgba);
-                
-                if (box.debug_shape_noise == DEBUG_SHAPE.SHAPE)
-                {
-                    EnableDebugShapeKeyWord(cmd,"DEBUG_SHAPE_NOSE");
-                }
-                else if(box.debug_shape_noise == DEBUG_SHAPE.DETAIL)
-                {
-                    EnableDebugShapeKeyWord(cmd,"DEBUG_DETAIL_NOSE");
-                }
-                else
-                {
-                    EnableDebugShapeKeyWord(cmd,"");
-                }
-
-
-                if (box.cloudShape == CloudBox.CloudShape.BOX)
-                {
-                    EnableShapeKeyWord(cmd,"SHAPE_BOX");
+                float raidu0 = localScale.x*0.5f;
+                float raidu1 = raidu0 * 1.2f;
                     
-                    Vector3 boxmin = boxcenter - localScale*0.5f;
-                    Vector3 boxmax = boxcenter + localScale*0.5f;
-                    cmd.SetGlobalVector("boxmin", boxmin);
-                    cmd.SetGlobalVector("boxmax", boxmax);
-                }
-                else
-                {
-                    EnableShapeKeyWord(cmd,"SHAPE_SPHERE");
+                cmd.SetGlobalFloat("radiusTerrain", raidu0);
+                cmd.SetGlobalFloat("radiusAtoms", raidu1);
+                cmd.SetGlobalVector("sphereCenter", boxcenter);
 
-                    float raidu0 = localScale.x*0.5f;
-                    float raidu1 = raidu0 * 1.2f;
-                    
-                    cmd.SetGlobalVector("boxmin", new Vector4(raidu0,0,0,0));
-                    cmd.SetGlobalVector("boxmax", new Vector4(raidu1,0,0,0));
-                    cmd.SetGlobalVector("sphereCenter", boxcenter);
-                }
+                
+                var waveRGBScatteringCoefficients = math.pow((new float3(400.0f))/sky.rgbWaveLengths, 4);
+                cmd.SetGlobalVector("waveRGBScatteringCoefficients", new Vector4(waveRGBScatteringCoefficients.x,
+                    waveRGBScatteringCoefficients.y,
+                    waveRGBScatteringCoefficients.z,
+                    1));
+                
                 
 
                 cmd.Blit(null,TmpTexId,_material,0);
                 cmd.SetGlobalTexture(MainTexId,soruce);
-                cmd.SetGlobalTexture("_CloudTex",TmpTexId);
+                cmd.SetGlobalTexture("_SkyTex",TmpTexId);
                 cmd.Blit(soruce,TmpTexId2,_material,1);
                 cmd.Blit(TmpTexId2, soruce);
             }
@@ -212,15 +162,15 @@ public class RayMarchCloudSRF : ScriptableRendererFeature
         }
     }
 
-    RayMarchCloudPass _mScriptableCloudPass;
+    RayMarchSkyPass _mScriptableCloudPass;
 
     /// <inheritdoc/>
     public override void Create()
     {
-        _mScriptableCloudPass = new RayMarchCloudPass();
+        _mScriptableCloudPass = new RayMarchSkyPass();
 
         // Configures where the render pass should be injected.
-        _mScriptableCloudPass.renderPassEvent = RenderPassEvent.BeforeRenderingPostProcessing;
+        _mScriptableCloudPass.renderPassEvent = RenderPassEvent.BeforeRenderingPostProcessing-1;
     }
 
     // Here you can inject one or multiple render passes in the renderer.

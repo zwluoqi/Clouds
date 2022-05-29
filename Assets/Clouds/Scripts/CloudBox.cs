@@ -1,9 +1,15 @@
+using System;
 using UnityEngine;
 
 namespace Clouds
 {
     public class CloudBox:MonoBehaviour
     {
+        private void Start()
+        {
+            
+        }
+
         public enum CloudShape
         {
             BOX,

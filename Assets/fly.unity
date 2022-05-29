@@ -491,13 +491,13 @@ Transform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1297667228}
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalRotation: {x: 0.68052906, y: 0, z: 0, w: 0.73272115}
   m_LocalPosition: {x: -3570, y: 10682, z: -9266}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 0}
   m_RootOrder: 4
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_LocalEulerAnglesHint: {x: 85.77, y: 0, z: 0}
 --- !u!114 &1465756058 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 114412280367074530, guid: 1ffc29c315992624cb793d6cbf2c4ac1, type: 3}
@@ -524,7 +524,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 3535805268057639986}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 152b9e126d384f3fb5f0cafa7270819b, type: 3}
   m_Name: 
@@ -537,20 +537,20 @@ MonoBehaviour:
   weatherMap: {fileID: 2800000, guid: ffbe84c4820a54394a87de82deef06ba, type: 3}
   globalCoverage: 0.24
   globalDensity: 1
-  globalThickness: 0.259
+  globalThickness: 0.255
   densityThreshold: 0.43
-  densityMultipler: 0.2
+  densityMultipler: 0.011
   numberStepCloud: 128
   lightPhaseStrength: 1
   lightPhaseIns: 0.5
   lightPhaseOuts: 0.5
   lightPhaseBlend: 1
-  lightPhaseCsi: 10
-  lightPhaseCse: 20
-  lightAbsorptionThroughCloud: 0.1
+  lightPhaseCsi: 16.4
+  lightPhaseCse: 36.4
+  lightAbsorptionThroughCloud: 0.11
   lightAbsorptionTowardSun: 1
   darknessThreshold: 0.01
-  numberStepLight: 2
+  numberStepLight: 13
   debug_shape_noise: 0
   debug_shape_z: 0
   debug_rgba: 2
@@ -567,6 +567,7 @@ GameObject:
   - component: {fileID: 3535805268057639985}
   - component: {fileID: 3535805268057639984}
   - component: {fileID: 3535805268057639987}
+  - component: {fileID: 3535805268057639988}
   m_Layer: 0
   m_Name: cloudshpere
   m_TagString: Untagged
@@ -615,6 +616,25 @@ MeshRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_AdditionalVertexStreams: {fileID: 0}
+--- !u!114 &3535805268057639988
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3535805268057639986}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3191081ffa0b049e4a22f09742cd1f61, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  atomDensityFalloff: 6
+  lightPhaseValue: 0.02
+  numberStepSky: 8
+  numberStepLight: 8
+  lightAbsorptionTowardSun: 1
+  darknessThreshold: 0
+  rgbWaveLengths: {x: 700, y: 530, z: 440}
 --- !u!135 &3535805268057639998
 SphereCollider:
   m_ObjectHideFlags: 0
