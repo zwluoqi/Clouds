@@ -28,7 +28,14 @@ float densityMultipler;
 float densityThreshold;//云层密度阀值
 int numberStepCloud;//云层密度检测步进
 
-float lightPhaseValue;//光线穿透能力
+float lightPhaseStrength;//光线穿透能力
+float lightPhaseIns;//[0,1]
+float lightPhaseOuts;//[0,1]
+float lightPhaseBlend;//[0,1]
+
+float lightPhaseCsi;//[0,max]
+float lightPhaseCse;//[0,max]
+
 float lightAbsorptionThroughCloud;//云层对光的吸收率
 
 
@@ -47,7 +54,7 @@ float debug_rgba;
 
 float SAT(float v)
 {
-    return clamp(0,1,v);
+    return saturate(v);
 }
 
 float remap(float v,float l0,float h0,float ln,float hn)
@@ -55,6 +62,21 @@ float remap(float v,float l0,float h0,float ln,float hn)
     return ln+(v-l0)*(hn-ln)/(h0-l0);
 }
 
+// Henyey-Greenstein
+float hg(float a, float g) {
+    float g2 =  g*g;
+    return (1-g2) / (4*3.1415*pow(1+g2-2*g*(a), 1.5));
+}
+
+float ISextra(float cosTheta)
+{
+    return  lightPhaseCsi*pow(SAT(cosTheta),lightPhaseCse);
+}
+
+float lightPhase(float cosTheta)
+{
+    return lerp( max(hg(cosTheta,lightPhaseIns) ,ISextra(cosTheta)), hg(cosTheta,-lightPhaseOuts),lightPhaseBlend);
+}
 
 float sampleDensityBox(float3 worldPos)
 {
@@ -141,12 +163,7 @@ float lightMarching(float3 rayPos)
     float3 dirToLight = normalize(dir.xyz);
     
     float distInsideBox = RayBoxIntersection(rayPos,dirToLight,boxmin,boxmax).y;
-    // return exp(distInsideBox);
-    // if (distInsideBox<=0.001)
-    // {
-    //     return 1;
-    // }
-    // 
+
     float stepSize = distInsideBox/numberStepLight;
     float totalDensity = 0;
     for (int step = 0;step <numberStepLight;step++)
@@ -155,7 +172,6 @@ float lightMarching(float3 rayPos)
         float density = sampleDensity(rayPos);
         totalDensity += density*stepSize;
     }
-    // return totalDensity;
 
     //密度越大,穿透率越低
     float transmittance = exp(-totalDensity*lightAbsorptionTowardSun);

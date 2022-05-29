@@ -26,12 +26,20 @@ namespace Clouds
 
         public Texture3D textureShape;
 
+        [Header ( "Lighting" )]
         [Range(1,256)]
         [Tooltip("云层光线步进数量")]
         public int numberStepCloud = 100;
         [Min(0.01f)]
         [Tooltip("光能强度")]
-        public float lightPhaseValue = 1;
+        public float lightPhaseStrength = 1;
+        [Range(0,1)]
+        public float lightPhaseIns = 1;
+        [Range(0,1)]
+        public float lightPhaseOuts = 1;
+        [Range(0,1)]
+        public float lightPhaseBlend = 1;
+        
         [Min(0.01f)]
         [Tooltip("摄像机射向云层使对光线吸收率")]
         public float lightAbsorptionThroughCloud = 1;
@@ -47,6 +55,7 @@ namespace Clouds
         [Tooltip("太阳光线步进数量")]
         public int numberStepLight = 100;
         
+        [Header ( "Debug" )]
         public bool debug_shape_noise;
         [Range(0,1)]
         public float debug_shape_z;

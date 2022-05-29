@@ -124,7 +124,12 @@ public class Shader_016RayMarchSRF : ScriptableRendererFeature
                 cmd.SetGlobalInt("numberStepCloud",box.numberStepCloud);
                 
                 
-                cmd.SetGlobalFloat("lightPhaseValue",box.lightPhaseValue);
+                cmd.SetGlobalFloat("lightPhaseStrength",box.lightPhaseStrength);
+                cmd.SetGlobalFloat("lightPhaseIns",box.lightPhaseIns);
+                cmd.SetGlobalFloat("lightPhaseOuts",box.lightPhaseOuts);
+                cmd.SetGlobalFloat("lightPhaseBlend",box.lightPhaseBlend);
+                
+                
                 cmd.SetGlobalFloat("lightAbsorptionThroughCloud",box.lightAbsorptionThroughCloud);
                 
                 

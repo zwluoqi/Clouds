@@ -304,7 +304,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!23 &823677397
 MeshRenderer:
   m_ObjectHideFlags: 0
@@ -374,7 +374,10 @@ MonoBehaviour:
   densityThreshold: 0.566
   textureShape: {fileID: 11700000, guid: 70c2adccd53fd45468d11570134863c2, type: 2}
   numberStepCloud: 64
-  lightPhaseValue: 0.1
+  lightPhaseStrength: 1
+  lightPhaseIns: 1
+  lightPhaseOuts: 1
+  lightPhaseBlend: 1
   lightAbsorptionThroughCloud: 0.1
   lightAbsorptionTowardSun: 1
   darknessThreshold: 0.01
@@ -521,7 +524,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!114 &1240080119
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -542,7 +545,10 @@ MonoBehaviour:
   densityThreshold: 0.533
   textureShape: {fileID: 11700000, guid: 70c2adccd53fd45468d11570134863c2, type: 2}
   numberStepCloud: 32
-  lightPhaseValue: 0.1
+  lightPhaseStrength: 1
+  lightPhaseIns: 0.442
+  lightPhaseOuts: 0.807
+  lightPhaseBlend: 1
   lightAbsorptionThroughCloud: 0.1
   lightAbsorptionTowardSun: 1
   darknessThreshold: 0.000001
@@ -615,7 +621,10 @@ MonoBehaviour:
   densityThreshold: 0.533
   textureShape: {fileID: 11700000, guid: 70c2adccd53fd45468d11570134863c2, type: 2}
   numberStepCloud: 16
-  lightPhaseValue: 0.1
+  lightPhaseStrength: 1
+  lightPhaseIns: 1
+  lightPhaseOuts: 1
+  lightPhaseBlend: 1
   lightAbsorptionThroughCloud: 0.1
   lightAbsorptionTowardSun: 1
   darknessThreshold: 0.01

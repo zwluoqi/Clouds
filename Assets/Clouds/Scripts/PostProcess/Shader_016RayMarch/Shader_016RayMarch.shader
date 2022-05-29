@@ -117,11 +117,14 @@ Shader "Shader/Shader_016RayMarch"
                 return float4(0,0,0,1);
                 #endif
 
-
+                float3 dirToLight = normalize(_MainLightPosition.xyz);
+                float cosTheta = dot(rayDir,dirToLight);
+                float lightPhaseValue = lightPhase(cosTheta);
+                
               float totalLightTransmittance = 0;
               float lightEnergy = 0;
               float transmittance = 1;
-              if(rayDst>0.01f){
+              if(rayDst>0.001f){
 
                   float stepDst = rayDst/numberStepCloud;
 
@@ -131,7 +134,7 @@ Shader "Shader/Shader_016RayMarch"
                   {
                       float3 rayPos = hitPoint + rayDir*(stepDst)*(step);
                       float density = sampleDensity(rayPos);
-                      if(density > 0.01f )
+                      if(density > 0 )
                       {
                           float lightTransmittance = lightMarching(rayPos);
                           totalLightTransmittance += lightTransmittance;
