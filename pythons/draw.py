@@ -10,10 +10,11 @@ def remap(v,l0,h0,ln,hn):
 
 
 xpoints = np.arange(0,1,0.01)
+
 m0 = remap(xpoints,0,0.07,0,1)
 ypoints = SAT(m0)
 
-m1 = remap(xpoints,0.2,1,1,0)
+m1 = remap(xpoints,0.4,1,1,0)
 zpoints = SAT(m1)
 
 m2 = remap(xpoints, 0, 0.15, 0, 1)
@@ -31,6 +32,7 @@ wpoints = gd*vpoints*upoints*wd*2
 # plt.plot(xpoints, ypoints)
 # plt.plot(xpoints, zpoints)
 # plt.plot(xpoints, ypoints*zpoints)
+
 plt.plot(xpoints, vpoints)
 plt.plot(xpoints, upoints)
 plt.plot(xpoints, wpoints)

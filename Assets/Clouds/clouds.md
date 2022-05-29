@@ -8,6 +8,8 @@
 8 DRb = ph ×SAT(R(ph, 0, 0.15, 0, 1)) 向底部降低密度<br>
 9 DRt = SAT(R(ph, 0.9, 1.0, 1, 0))) 向顶部的更柔和的过渡降低密度<br>
 10 DA = gd × DRb × DRt × wd × 2 密度融合<br>
+
+11 SNsample = R(snr, (sng ×0.625+snb ×0.25+sna ×0.125)−1, 1, 0, 1)  FBM gba <br>  
 <br>
 scalar probabilities<br>
  global coverage term gc [0,1]<br>

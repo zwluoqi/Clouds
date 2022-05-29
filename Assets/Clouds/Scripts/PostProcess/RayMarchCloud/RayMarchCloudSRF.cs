@@ -5,45 +5,23 @@ using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 using Object = UnityEngine.Object;
 
-public class Shader_016RayMarchSRF : ScriptableRendererFeature
+public class RayMarchCloudSRF : ScriptableRendererFeature
 {
-    class Shader_016RayMarchPass : ScriptableRenderPass
+    class RayMarchCloudPass : ScriptableRenderPass
     {
 
-        public static string k_RenderTag = "Shader_016RayMarch";
-        static string shaderName = "Shader/Shader_016RayMarch";
-        // private Shader_016RayMarchVolume volume;
+        public static string k_RenderTag = "RayMarchCloud";
+        static string shaderName = "Shader/RayMarchCloud";
+
         private RenderTargetIdentifier _renderTargetIdentifier;
         private Material _material;
 
         private static readonly int MainTexId = Shader.PropertyToID("_MainTex");
         private static readonly int TmpTexId = Shader.PropertyToID("_TmpTex");
         private static readonly int TmpTexId2 = Shader.PropertyToID("_TmpTex2");
-        // private static readonly int TmpTexId3 = Shader.PropertyToID("_TmpTex3");
-        //
-        // private static readonly int boxminId = Shader.PropertyToID("boxmin");
-        // private static readonly int boxmaxId = Shader.PropertyToID("boxmax");
-        // private static readonly int _alphaMultiplier = Shader.PropertyToID("_alphaMultiplier");
-        // private static readonly int _colorMultiplier = Shader.PropertyToID("_colorMultiplier");
-        // private static readonly int _fogMultiplier = Shader.PropertyToID("_fogMultiplier");
-        //
-        // private static readonly int _waterSmoothness = Shader.PropertyToID("_waterSmoothness");
-        //
-        // private static readonly int depthColor = Shader.PropertyToID("depthColor");
-        // private static readonly int surfaceColor = Shader.PropertyToID("surfaceColor");
-        //
-        // private static readonly int waveLen = Shader.PropertyToID("waveLen");
-        //
-        // private static readonly int waves = Shader.PropertyToID("waves");
-        //
-        //
-        //
-        // private static readonly int mouseFocusPoint = Shader.PropertyToID("mouseFocusPoint");
+        
 
-        // private RenderTextureDescriptor _cameraTextureDescriptor;
-
-
-        public Shader_016RayMarchPass()
+        public RayMarchCloudPass()
         {
             
         }
@@ -119,6 +97,10 @@ public class Shader_016RayMarchSRF : ScriptableRendererFeature
                 cmd.SetGlobalFloat("samplerScale",box.samplerScale);
                 cmd.SetGlobalVector("samplerOffset",box.samplerOffset);
                 cmd.SetGlobalFloat("globalCoverage",box.globalCoverage);
+                cmd.SetGlobalFloat("globalDensity",box.globalDensity);
+                cmd.SetGlobalFloat("globalThickness",box.globalThickness);
+                
+                
                 cmd.SetGlobalFloat("densityMultipler",box.densityMultipler);
                 cmd.SetGlobalFloat("densityThreshold",box.densityThreshold);
                 cmd.SetGlobalInt("numberStepCloud",box.numberStepCloud);
@@ -128,6 +110,10 @@ public class Shader_016RayMarchSRF : ScriptableRendererFeature
                 cmd.SetGlobalFloat("lightPhaseIns",box.lightPhaseIns);
                 cmd.SetGlobalFloat("lightPhaseOuts",box.lightPhaseOuts);
                 cmd.SetGlobalFloat("lightPhaseBlend",box.lightPhaseBlend);
+                
+                cmd.SetGlobalFloat("lightPhaseCsi",box.lightPhaseCsi);
+                cmd.SetGlobalFloat("lightPhaseCse",box.lightPhaseCse);
+                
                 
                 
                 cmd.SetGlobalFloat("lightAbsorptionThroughCloud",box.lightAbsorptionThroughCloud);
@@ -141,17 +127,26 @@ public class Shader_016RayMarchSRF : ScriptableRendererFeature
                 
                 
                 cmd.SetGlobalTexture("shapeNoise",box.textureShape);
+                cmd.SetGlobalTexture("detailNoise",box.detailShape);
+                cmd.SetGlobalTexture("weatherMap",box.weatherMap);
+                
+        
                 cmd.SetGlobalFloat("debug_shape_z",box.debug_shape_z);
                 cmd.SetGlobalInt("debug_rgba",(int)box.debug_rgba);
                 
-                if (box.debug_shape_noise)
+                if (box.debug_shape_noise == DEBUG_SHAPE.SHAPE)
                 {
-                    cmd.EnableShaderKeyword("DEBUG_SHAPE_NOSE");
+                    EnableDebugShapeKeyWord(cmd,"DEBUG_SHAPE_NOSE");
+                }
+                else if(box.debug_shape_noise == DEBUG_SHAPE.DETAIL)
+                {
+                    EnableDebugShapeKeyWord(cmd,"DEBUG_DETAIL_NOSE");
                 }
                 else
                 {
-                    cmd.DisableShaderKeyword("DEBUG_SHAPE_NOSE");
+                    EnableDebugShapeKeyWord(cmd,"");
                 }
+
 
                 if (box.cloudShape == CloudBox.CloudShape.BOX)
                 {
@@ -167,7 +162,7 @@ public class Shader_016RayMarchSRF : ScriptableRendererFeature
                     EnableShapeKeyWord(cmd,"SHAPE_SPHERE");
 
                     float raidu0 = localScale.x*0.5f;
-                    float raidu1 = raidu0 * 1.1f;
+                    float raidu1 = raidu0 * 1.2f;
                     
                     cmd.SetGlobalVector("boxmin", new Vector4(raidu0,0,0,0));
                     cmd.SetGlobalVector("boxmax", new Vector4(raidu1,0,0,0));
@@ -185,6 +180,17 @@ public class Shader_016RayMarchSRF : ScriptableRendererFeature
 
             CommandBufferPool.Release(cmd);
 
+        }
+
+        private void EnableDebugShapeKeyWord(CommandBuffer cmd, string debugShapeNose)
+        {
+            cmd.DisableShaderKeyword("DEBUG_SHAPE_NOSE");
+            cmd.DisableShaderKeyword("DEBUG_DETAIL_NOSE");
+            if (!string.IsNullOrEmpty(debugShapeNose))
+            {
+                cmd.EnableShaderKeyword(debugShapeNose);    
+            }
+            
         }
 
         private void EnableShapeKeyWord(CommandBuffer cmd,string shapeBox)
@@ -212,23 +218,23 @@ public class Shader_016RayMarchSRF : ScriptableRendererFeature
         }
     }
 
-    Shader_016RayMarchPass m_ScriptablePass;
+    RayMarchCloudPass _mScriptableCloudPass;
 
     /// <inheritdoc/>
     public override void Create()
     {
-        m_ScriptablePass = new Shader_016RayMarchPass();
+        _mScriptableCloudPass = new RayMarchCloudPass();
 
         // Configures where the render pass should be injected.
-        m_ScriptablePass.renderPassEvent = RenderPassEvent.BeforeRenderingPostProcessing;
+        _mScriptableCloudPass.renderPassEvent = RenderPassEvent.BeforeRenderingPostProcessing;
     }
 
     // Here you can inject one or multiple render passes in the renderer.
     // This method is called when setting up the renderer once per-camera.
     public override void AddRenderPasses(ScriptableRenderer renderer, ref RenderingData renderingData)
     {
-        m_ScriptablePass.SetUp(renderer.cameraColorTarget);
-        renderer.EnqueuePass(m_ScriptablePass);
+        _mScriptableCloudPass.SetUp(renderer.cameraColorTarget);
+        renderer.EnqueuePass(_mScriptableCloudPass);
     }
 }
 

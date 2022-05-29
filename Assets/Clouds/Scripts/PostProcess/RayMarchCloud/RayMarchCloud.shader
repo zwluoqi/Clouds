@@ -1,5 +1,5 @@
 
-Shader "Shader/Shader_016RayMarch"
+Shader "Shader/RayMarchCloud"
 {
     Properties
     {
@@ -36,7 +36,7 @@ Shader "Shader/Shader_016RayMarch"
     #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
     #include "Clouds.hlsl"
 
-        #pragma multi_compile _ DEBUG_SHAPE_NOSE
+        #pragma multi_compile _ DEBUG_SHAPE_NOSE DEBUG_DETAIL_NOSE
         #pragma multi_compile SHAPE_BOX SHAPE_SPHERE 
             
             struct Attributes
@@ -82,16 +82,25 @@ Shader "Shader/Shader_016RayMarch"
               float4 ndcPos = (input.screenPos / input.screenPos.w);
               float deviceDepth = SAMPLE_DEPTH_TEXTURE(_CameraDepthTexture, sampler_CameraDepthTexture, ndcPos.xy);                
               float3 colorWorldPos = ComputeWorldSpacePosition(ndcPos.xy, deviceDepth, UNITY_MATRIX_I_VP);
+                // return float4(deviceDepth,0,0,1);
 
-            #ifdef DEBUG_SHAPE_NOSE
-            float4 rgba = SAMPLE_TEXTURE3D_LOD(shapeNoise, sampler_shapeNoise, float3(ndcPos.xy,debug_shape_z),0);
-                if (debug_rgba<4){
-            return rgba[debug_rgba];
+                #ifdef DEBUG_SHAPE_NOSE
+                    float4 rgba = SAMPLE_TEXTURE3D_LOD(shapeNoise, sampler_shapeNoise, float3(ndcPos.xy,debug_shape_z),0);
+                    if (debug_rgba<4){
+                        return rgba[debug_rgba];
                     }else
                     {
                         return rgba;
                     }
-            #endif
+                #elif DEBUG_DETAIL_NOSE
+                    float4 rgba = SAMPLE_TEXTURE3D_LOD(detailNoise, sampler_detailNoise, float3(ndcPos.xy,debug_shape_z),0);
+                    if (debug_rgba<4){
+                        return rgba[debug_rgba];
+                    }else
+                    {
+                        return rgba;
+                    }
+                #endif
                 
             
 
@@ -100,38 +109,42 @@ Shader "Shader/Shader_016RayMarch"
               float3 cameraToPosDir = colorWorldPos - _WorldSpaceCameraPos.xyz;
               float3 rayDir = normalize(cameraToPosDir);
 
+
                 #ifdef SHAPE_BOX
               float2 distToBox = RayBoxIntersection(_WorldSpaceCameraPos.xyz,rayDir,boxmin,boxmax);
-              float rayDst = min(distToBox.y,length(cameraToPosDir)-distToBox.x);
+
               float distToBoxHit = distToBox.x;
+              float rayDst = min(distToBox.y,length(cameraToPosDir)-distToBoxHit);
                 #elif  SHAPE_SPHERE
               float2 distToOuter = RaySphereIntersection(sphereCenter.xyz,boxmax.x,_WorldSpaceCameraPos.xyz,rayDir);
               float2 distToInner = RaySphereIntersection(sphereCenter.xyz,boxmin.x,_WorldSpaceCameraPos.xyz,rayDir);
-              float3 dirToCenter = (sphereCenter.xyz - _WorldSpaceCameraPos);
+
 
               float distToBoxHit = min(distToOuter.x,distToInner.x);
               float rayDst = min(distToInner.x- distToOuter.x,distToOuter.y-distToInner.y);
                 rayDst = min(rayDst,length(cameraToPosDir)-distToBoxHit);
-                //TODO 采样时转到球面坐标采样更加合理
                 #else
-                return float4(0,0,0,1);
+                float rayDst  = 0;
+                float distToBoxHit = 0;
                 #endif
 
                 float3 dirToLight = normalize(_MainLightPosition.xyz);
                 float cosTheta = dot(rayDir,dirToLight);
                 float lightPhaseValue = lightPhase(cosTheta);
-                
+
+
               float totalLightTransmittance = 0;
               float lightEnergy = 0;
               float transmittance = 1;
-              if(rayDst>0.001f){
 
+              if(rayDst>0.001f){
                   float stepDst = rayDst/numberStepCloud;
 
                   float3 hitPoint = _WorldSpaceCameraPos.xyz + rayDir*(distToBoxHit);
 
                   for (int step = 0;step <numberStepCloud;step++)
                   {
+                    
                       float3 rayPos = hitPoint + rayDir*(stepDst)*(step);
                       float density = sampleDensity(rayPos);
                       if(density > 0 )

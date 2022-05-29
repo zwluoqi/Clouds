@@ -26,7 +26,7 @@ RenderSettings:
   m_AmbientIntensity: 1
   m_AmbientMode: 0
   m_SubtractiveShadowColor: {r: 0.42, g: 0.478, b: 0.627, a: 1}
-  m_SkyboxMaterial: {fileID: 10304, guid: 0000000000000000f000000000000000, type: 0}
+  m_SkyboxMaterial: {fileID: 0}
   m_HaloStrength: 0.5
   m_FlareStrength: 1
   m_FlareFadeSpeed: 3
@@ -38,7 +38,7 @@ RenderSettings:
   m_ReflectionIntensity: 1
   m_CustomReflection: {fileID: 0}
   m_Sun: {fileID: 0}
-  m_IndirectSpecularColor: {r: 0.18028364, g: 0.22571398, b: 0.30692267, a: 1}
+  m_IndirectSpecularColor: {r: 0, g: 0, b: 0, a: 1}
   m_UseRadianceAmbientProbe: 0
 --- !u!157 &3
 LightmapSettings:
@@ -491,13 +491,13 @@ Transform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1297667228}
-  m_LocalRotation: {x: 0.40821788, y: -0.23456968, z: 0.10938163, w: 0.8754261}
-  m_LocalPosition: {x: -3780, y: 0, z: 0}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -3570, y: 10682, z: -9266}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 0}
   m_RootOrder: 4
-  m_LocalEulerAnglesHint: {x: 50, y: -30, z: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &1465756058 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 114412280367074530, guid: 1ffc29c315992624cb793d6cbf2c4ac1, type: 3}
@@ -531,20 +531,29 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   cloudShape: 1
   samplerScale: 0.1
-  samplerOffset: {x: 167.19, y: 99.3, z: 25.4}
-  globalCoverage: 0.219
-  densityMultipler: 0.2
-  densityThreshold: 0.566
+  samplerOffset: {x: 150.1, y: 99.3, z: 25.4}
   textureShape: {fileID: 11700000, guid: 70c2adccd53fd45468d11570134863c2, type: 2}
+  detailShape: {fileID: 11700000, guid: 206e9646e82f94c249cda79e716d3f1d, type: 2}
+  weatherMap: {fileID: 2800000, guid: ffbe84c4820a54394a87de82deef06ba, type: 3}
+  globalCoverage: 0.24
+  globalDensity: 1
+  globalThickness: 0.259
+  densityThreshold: 0.43
+  densityMultipler: 0.2
   numberStepCloud: 128
-  lightPhaseValue: 0.1
+  lightPhaseStrength: 1
+  lightPhaseIns: 0.5
+  lightPhaseOuts: 0.5
+  lightPhaseBlend: 1
+  lightPhaseCsi: 10
+  lightPhaseCse: 20
   lightAbsorptionThroughCloud: 0.1
   lightAbsorptionTowardSun: 1
   darknessThreshold: 0.01
   numberStepLight: 2
   debug_shape_noise: 0
   debug_shape_z: 0
-  debug_rgba: 1
+  debug_rgba: 2
 --- !u!1 &3535805268057639986
 GameObject:
   m_ObjectHideFlags: 0
