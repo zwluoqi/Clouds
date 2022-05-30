@@ -58,7 +58,7 @@ Shader "Shader/RayMarchSky"
               float4 ndcPos = (input.screenPos / input.screenPos.w);
               float deviceDepth = SAMPLE_DEPTH_TEXTURE(_CameraDepthTexture, sampler_CameraDepthTexture, ndcPos.xy);                
               float3 colorWorldPos = ComputeWorldSpacePosition(ndcPos.xy, deviceDepth, UNITY_MATRIX_I_VP);
-
+              // return deviceDepth;
 
              
               float3 cameraToPosDir = colorWorldPos - _WorldSpaceCameraPos.xyz;
@@ -100,7 +100,7 @@ Shader "Shader/RayMarchSky"
                       float4 lightDensity = marchingDensity(rayPos,dirToLight,hitToAtoms.y);
                       viewDensity = marchingDensity(rayPos,-rayDir,stepDst*step);                                          
                         //密度越大,穿透率越低
-                      float4 transmittance = exp(-(lightDensity+viewDensity)*lightAbsorptionTowardSun*waveRGBScatteringCoefficients);
+                      float4 transmittance = exp(-(lightDensity+viewDensity)*lightAbsorptionTowardSun*waveRGBScatteringCoefficients/radiusTerrain);
 
                       lightEnergy += (density * stepDst * waveRGBScatteringCoefficients * transmittance * lightPhaseValue);
                   }
@@ -113,7 +113,7 @@ Shader "Shader/RayMarchSky"
 
              //add sun
              float focusedEyeCos = pow(saturate(cosTheta), sunSmoothness);
-             float sun = saturate(hg(focusedEyeCos, .9995)) * viewTransmit*(1-saturate(distToInner.y));
+             float sun = saturate(hg(focusedEyeCos, .9995)) * viewTransmit*(1-saturate(distToInner.y) ) * step(deviceDepth,0.001);
              // return sun;
               return float4(lightEnergy.xyz*(1-sun)+sun*_MainLightColor,viewTransmit);
             }
