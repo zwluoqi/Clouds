@@ -280,6 +280,10 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 114329657595640044, guid: 76845026de374da4aa455cd164e63143, type: 3}
+      propertyPath: thrust
+      value: 100
+      objectReference: {fileID: 0}
+    - target: {fileID: 114329657595640044, guid: 76845026de374da4aa455cd164e63143, type: 3}
       propertyPath: controller
       value: 
       objectReference: {fileID: 1465756058}
@@ -491,13 +495,13 @@ Transform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1297667228}
-  m_LocalRotation: {x: 0.68052906, y: 0, z: 0, w: 0.73272115}
+  m_LocalRotation: {x: -0.004518296, y: 0.8554876, z: -0.51774985, w: -0.0074656643}
   m_LocalPosition: {x: -3570, y: 10682, z: -9266}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 0}
   m_RootOrder: 4
-  m_LocalEulerAnglesHint: {x: 85.77, y: 0, z: 0}
+  m_LocalEulerAnglesHint: {x: 62.366, y: 181, z: 0}
 --- !u!114 &1465756058 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 114412280367074530, guid: 1ffc29c315992624cb793d6cbf2c4ac1, type: 3}
@@ -628,13 +632,15 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3191081ffa0b049e4a22f09742cd1f61, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  atomDensityFalloff: 6
-  lightPhaseValue: 0.02
-  numberStepSky: 8
-  numberStepLight: 8
-  lightAbsorptionTowardSun: 1
+  atomScale: 1.2
+  atomDensityFalloff: 1
+  lightPhaseValue: 4
+  numberStepSky: 16
+  numberStepLight: 6
+  lightAbsorptionTowardSun: 0.001
   darknessThreshold: 0
-  rgbWaveLengths: {x: 700, y: 530, z: 440}
+  rgbWaveLengths: {x: 700, y: 550, z: 400}
+  sunSmoothness: 4.18
 --- !u!135 &3535805268057639998
 SphereCollider:
   m_ObjectHideFlags: 0

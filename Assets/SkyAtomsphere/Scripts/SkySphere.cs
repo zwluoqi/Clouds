@@ -9,7 +9,8 @@ public class SkySphere : MonoBehaviour
             
     }
 
-    [Min(0.01f)]
+    [Min(0.1f)] public float atomScale = 1;
+    [Min(0.0f)]
     public float atomDensityFalloff = 1;
     [Min(0.01f)]
     public float lightPhaseValue = 1;
@@ -23,4 +24,7 @@ public class SkySphere : MonoBehaviour
     public float darknessThreshold = 0f;
 
     public Vector3 rgbWaveLengths = new Vector3(700, 530, 440);
+
+    [Min(0.0001f)]
+    public float sunSmoothness = 1.0f;
 }

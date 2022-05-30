@@ -74,13 +74,14 @@ Shader "Shader/RayMarchSky"
 
                 
                 float3 dirToLight = normalize(_MainLightPosition.xyz);
-                // float cosTheta = dot(rayDir,dirToLight);
+                float cosTheta = dot(rayDir,dirToLight);
                 // float lightPhaseValue = lightPhase(cosTheta);
                 // float lightPhaseValue= 1;
 
 
               float4 lightEnergy = 0;
               float totalDensity = 0;
+              float viewTransmit = 1;
               if(rayDst>0.001f){
                   // return rayDst/(radiusAtoms*2);
 
@@ -88,7 +89,7 @@ Shader "Shader/RayMarchSky"
                   float stepDst = (rayDst-2*thickness)/numberStepSky;
                   
                   float3 hitPoint = _WorldSpaceCameraPos.xyz + rayDir*(distToBoxHit+thickness);
-                  
+                  float4 viewDensity;
                   for (int step = 0;step <numberStepSky;step++)
                   {
                       float3 rayPos = hitPoint + rayDir*(stepDst)*(step);
@@ -96,24 +97,32 @@ Shader "Shader/RayMarchSky"
                       totalDensity+=density;
                       
                       float2 hitToAtoms = RaySphereIntersection(sphereCenter,radiusAtoms,rayPos,dirToLight);
-                      float4 lightTransmittance = marchingTransmittance(rayPos,dirToLight,hitToAtoms.y);
-                      float4 viewTransmittance = marchingTransmittance(rayPos,-rayDir,stepDst*step);
-                      
-                      lightEnergy += (density * stepDst  * (lightTransmittance*viewTransmittance) * lightPhaseValue);
+                      float4 lightDensity = marchingDensity(rayPos,dirToLight,hitToAtoms.y);
+                      viewDensity = marchingDensity(rayPos,-rayDir,stepDst*step);                                          
+                        //密度越大,穿透率越低
+                      float4 transmittance = exp(-(lightDensity+viewDensity)*lightAbsorptionTowardSun*waveRGBScatteringCoefficients);
+
+                      lightEnergy += (density * stepDst * waveRGBScatteringCoefficients * transmittance * lightPhaseValue);
                   }
-                  // return totalDensity/numberStepSky;
+                  lightEnergy /= radiusTerrain;
+                  viewTransmit = exp(-viewDensity/radiusTerrain);
+                  // return viewTransmit;
                }
 
               // float4 skyCol = lightEnergy;
 
-              return lightEnergy;
+             //add sun
+             float focusedEyeCos = pow(saturate(cosTheta), sunSmoothness);
+             float sun = saturate(hg(focusedEyeCos, .9995)) * viewTransmit*(1-saturate(distToInner.y));
+             // return sun;
+              return float4(lightEnergy.xyz*(1-sun)+sun*_MainLightColor,viewTransmit);
             }
 
             half4 FragBlend(Varyings input) : SV_Target{
                 float4 ndcPos = (input.screenPos / input.screenPos.w);
                 float4 backgroundCol = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex,ndcPos.xy);
                 float4 cloudCol = SAMPLE_TEXTURE2D(_SkyTex, sampler_SkyTex,ndcPos.xy);
-                return float4(backgroundCol.xyz*(1-cloudCol.a)+cloudCol.xyz,1);
+                return float4(backgroundCol.xyz*cloudCol.a+cloudCol.xyz,1);
             }
             
     ENDHLSL

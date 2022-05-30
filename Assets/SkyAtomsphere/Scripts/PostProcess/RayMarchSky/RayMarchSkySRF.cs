@@ -99,7 +99,7 @@ public class RayMarchSkySRF : ScriptableRendererFeature
                 
                 
                 float raidu0 = localScale.x*0.5f;
-                float raidu1 = raidu0 * 1.2f;
+                float raidu1 = raidu0 * 1.2f*sky.atomScale;
                     
                 cmd.SetGlobalFloat("radiusTerrain", raidu0);
                 cmd.SetGlobalFloat("radiusAtoms", raidu1);
@@ -111,7 +111,7 @@ public class RayMarchSkySRF : ScriptableRendererFeature
                     waveRGBScatteringCoefficients.y,
                     waveRGBScatteringCoefficients.z,
                     1));
-                
+                cmd.SetGlobalFloat("sunSmoothness",sky.sunSmoothness);
                 
 
                 cmd.Blit(null,TmpTexId,_material,0);

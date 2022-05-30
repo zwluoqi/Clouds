@@ -28,9 +28,15 @@ float lightAbsorptionTowardSun;
 float darknessThreshold;
 
 float4 waveRGBScatteringCoefficients;
+float sunSmoothness;
 // CBUFFER_END
 
 
+// Henyey-Greenstein
+float hg(float cosTheta, float g) {
+    float g2 =  g*g;
+    return (1-g2) / (4*3.1415*pow(1+g2-2*g*(cosTheta), 1.5));
+}
 
 float sampleDensity(float3 worldpos)
 {
@@ -42,7 +48,7 @@ float sampleDensity(float3 worldpos)
 }
 
 
-float4 marchingTransmittance(float3 rayPos,float3 rayDir,float rayLength)
+float4 marchingDensity(float3 rayPos,float3 rayDir,float rayLength)
 {
     float stepSize = rayLength/numberStepLight;
     float totalDensity = 0;
@@ -52,11 +58,7 @@ float4 marchingTransmittance(float3 rayPos,float3 rayDir,float rayLength)
         float density = sampleDensity(rayPos);
         totalDensity += density*stepSize;
     }
-
-    //密度越大,穿透率越低
-    float4 transmittance = exp(-totalDensity*lightAbsorptionTowardSun*waveRGBScatteringCoefficients);
-    
-    return darknessThreshold + transmittance*(1-darknessThreshold);
+    return totalDensity;
 }
 
 
