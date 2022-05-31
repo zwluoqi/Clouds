@@ -132,8 +132,8 @@ float sampleDensitySphere(float3 worldPos)
     
 
     float3 normal = normalize(dir);
-    float u = samplerScale*10*atan(normal.z/normal.x) / 3.1415*2.0;
-    float v = samplerScale*10*asin(normal.y) / 3.1415*2.0 + 0.5;
+    float u = samplerScale*10*atan(normal.z/normal.x) / 3.1415*2.0 + samplerOffset.x*0.01;
+    float v = samplerScale*10*asin(normal.y) / 3.1415*2.0 + 0.5 + samplerOffset.y*0.01;
     
     float3 textureCoord = float3(u,v,heightPercent*samplerHeightScale*0.01);
     float4 rgba = SAMPLE_TEXTURE3D_LOD(shapeNoise, sampler_shapeNoise, textureCoord,0);
