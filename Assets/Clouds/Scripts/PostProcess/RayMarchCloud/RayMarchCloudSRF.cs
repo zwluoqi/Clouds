@@ -89,6 +89,8 @@ public class RayMarchCloudSRF : ScriptableRendererFeature
                 
                 
                 cmd.SetGlobalFloat("samplerScale",box.samplerScale);
+                cmd.SetGlobalFloat("samplerHeightScale",box.samplerHeightScale);
+                
                 cmd.SetGlobalVector("samplerOffset",box.samplerOffset);
                 cmd.SetGlobalFloat("globalCoverage",box.globalCoverage);
                 cmd.SetGlobalFloat("globalDensity",box.globalDensity);
@@ -156,10 +158,11 @@ public class RayMarchCloudSRF : ScriptableRendererFeature
                     EnableShapeKeyWord(cmd,"SHAPE_SPHERE");
 
                     float raidu0 = localScale.x*0.5f;
-                    float raidu1 = raidu0 * 1.2f;
+                    float raidu1 = raidu0 * 1.1f;
+                    float raidu2 = raidu1 * 1.2f;
                     
-                    cmd.SetGlobalVector("boxmin", new Vector4(raidu0,0,0,0));
-                    cmd.SetGlobalVector("boxmax", new Vector4(raidu1,0,0,0));
+                    cmd.SetGlobalVector("boxmin", new Vector4(raidu1,0,0,0));
+                    cmd.SetGlobalVector("boxmax", new Vector4(raidu2,0,0,0));
                     cmd.SetGlobalVector("sphereCenter", boxcenter);
                 }
                 
@@ -220,7 +223,7 @@ public class RayMarchCloudSRF : ScriptableRendererFeature
         _mScriptableCloudPass = new RayMarchCloudPass();
 
         // Configures where the render pass should be injected.
-        _mScriptableCloudPass.renderPassEvent = RenderPassEvent.BeforeRenderingPostProcessing;
+        _mScriptableCloudPass.renderPassEvent = RenderPassEvent.BeforeRenderingTransparents-10;
     }
 
     // Here you can inject one or multiple render passes in the renderer.

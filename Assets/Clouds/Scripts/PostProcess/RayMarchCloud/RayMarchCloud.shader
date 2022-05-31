@@ -132,39 +132,57 @@ Shader "Shader/RayMarchCloud"
                 float cosTheta = dot(rayDir,dirToLight);
                 float lightPhaseValue = lightPhase(cosTheta);
 
-
               float totalLightTransmittance = 0;
               float lightEnergy = 0;
               float transmittance = 1;
-
+              float cloudHeight = 1;
+              float totalDensity = 0;
+                #ifdef SHAPE_BOX
+                    cloudHeight = (boxmax.y-boxmin.y);
+                #elif SHAPE_SPHERE
+                    cloudHeight = (boxmax.x-boxmin.x);
+                #endif
               if(rayDst>0.001f){
                   float stepDst = rayDst/numberStepCloud;
-
                   float3 hitPoint = _WorldSpaceCameraPos.xyz + rayDir*(distToBoxHit);
-
                   for (int step = 0;step <numberStepCloud;step++)
                   {
-                    
                       float3 rayPos = hitPoint + rayDir*(stepDst)*(step);
+
                       float density = sampleDensity(rayPos);
+                      // totalDensity+=density;
+                      float lightEnergyFactor = 1;
                       if(density > 0 )
                       {
-                          float lightTransmittance = lightMarching(rayPos);
+                          float distInsideBox = 0;
+                          #ifdef SHAPE_BOX
+                                distInsideBox = RayBoxIntersection(rayPos,dirToLight,boxmin,boxmax).y;
+                          #elif SHAPE_SPHERE
+                                distInsideBox = RaySphereIntersection(sphereCenter.xyz,boxmax.x,rayPos,dirToLight).y;
+                          #endif
+                          
+                      
+                          float lightDensity = lightMarchingDensity(rayPos,dirToLight,distInsideBox);
+                          float lightTransmittance = exp(-lightDensity*lightAbsorptionTowardSun/cloudHeight)*(1-darknessThreshold)+darknessThreshold;
                           totalLightTransmittance += lightTransmittance;
 
-                          lightEnergy += (density * stepDst * transmittance * lightTransmittance*lightPhaseValue);
-                          transmittance *= (exp(-density*stepDst*lightAbsorptionThroughCloud));
+                            #ifdef SHAPE_SPHERE
+                                float ditFacotr = distInsideBox/(2*boxmax.x);
+                                lightEnergyFactor = 1-ditFacotr*ditFacotr*ditFacotr;
+                            #endif                   
+                          
+                          lightEnergy += (density * stepDst * transmittance * lightTransmittance*lightPhaseValue)*lightEnergyFactor;
+                          transmittance *= (exp(-density*stepDst*lightAbsorptionThroughCloud/cloudHeight));
                           if(transmittance < 0.001)
                           {
                               break;
                           }
                       }
                   }
+
                }
 
-                // Add Cloud To background
-              //
-              // float4 backgroundCol = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex,ndcPos.xy);
+
               float4 cloudCol = lightEnergy*_MainLightColor;
 
               return float4(cloudCol.rgb,transmittance);

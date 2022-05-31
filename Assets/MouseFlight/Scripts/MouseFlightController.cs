@@ -3,6 +3,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for details.
 //
 
+using System;
 using UnityEngine;
 
 namespace MFlight
@@ -96,12 +97,22 @@ namespace MFlight
             transform.parent = null;
         }
 
+        private void Start()
+        {
+            Cursor.lockState = CursorLockMode.Locked;
+        }
+        
+
         private void Update()
         {
             if (useFixed == false)
                 UpdateCameraPos();
-
+            if (!Application.isFocused)
+            {
+                return;
+            }
             RotateRig();
+            
         }
 
         private void FixedUpdate()

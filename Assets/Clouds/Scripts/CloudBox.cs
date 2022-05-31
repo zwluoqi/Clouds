@@ -20,8 +20,10 @@ namespace Clouds
         
         
         [Header ( "Density" )]
-        [Min(0.01f)]
+        [Min(0.001f)]
         public float samplerScale = 1;
+        [Min(0.001f)]
+        public float samplerHeightScale = 1;
         public Vector3 samplerOffset = Vector3.zero;
         
         
@@ -35,7 +37,7 @@ namespace Clouds
         public float globalCoverage = 1;
         [Min(0.01f)]
         public float globalDensity = 1;
-        [Range(0.2f,0.5f)]
+        [Range(0.2f,1f)]
         public float globalThickness = 0.2f;
         
         [Header ( "----Box Value" )]

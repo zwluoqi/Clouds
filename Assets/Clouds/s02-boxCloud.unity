@@ -367,30 +367,31 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   cloudShape: 1
-  samplerScale: 0.1
-  samplerOffset: {x: 167.19, y: 99.3, z: 25.4}
+  samplerScale: 0.05
+  samplerHeightScale: 1
+  samplerOffset: {x: 337.41, y: 124.1, z: 58.5}
   textureShape: {fileID: 11700000, guid: 70c2adccd53fd45468d11570134863c2, type: 2}
   detailShape: {fileID: 11700000, guid: 206e9646e82f94c249cda79e716d3f1d, type: 2}
   weatherMap: {fileID: 0}
-  globalCoverage: 0.219
-  globalDensity: 0.44
-  globalThickness: 0.2
-  densityThreshold: 0.539
-  densityMultipler: 0.2
-  numberStepCloud: 64
+  globalCoverage: 0.255
+  globalDensity: 0.26
+  globalThickness: 0.607
+  densityThreshold: 0.51
+  densityMultipler: 0.56
+  numberStepCloud: 32
   lightPhaseStrength: 1
   lightPhaseIns: 0.5
   lightPhaseOuts: 0.5
   lightPhaseBlend: 1
   lightPhaseCsi: 19.5
   lightPhaseCse: 47.3
-  lightAbsorptionThroughCloud: 0.1
-  lightAbsorptionTowardSun: 1
+  lightAbsorptionThroughCloud: 100
+  lightAbsorptionTowardSun: 10
   darknessThreshold: 0.01
   numberStepLight: 4
   debug_shape_noise: 0
-  debug_shape_z: 0
-  debug_rgba: 1
+  debug_shape_z: 1
+  debug_rgba: 0
 --- !u!135 &823677400
 SphereCollider:
   m_ObjectHideFlags: 0
@@ -545,24 +546,25 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   cloudShape: 0
   samplerScale: 0.1
+  samplerHeightScale: 1
   samplerOffset: {x: 156.82, y: 111.7, z: 25.4}
   textureShape: {fileID: 11700000, guid: 70c2adccd53fd45468d11570134863c2, type: 2}
-  detailShape: {fileID: 0}
+  detailShape: {fileID: 11700000, guid: 206e9646e82f94c249cda79e716d3f1d, type: 2}
   weatherMap: {fileID: 0}
-  globalCoverage: 0.213
+  globalCoverage: 0.187
   globalDensity: 1
   globalThickness: 0.2
-  densityThreshold: 0.533
-  densityMultipler: 0.37
+  densityThreshold: 0.526
+  densityMultipler: 0.3
   numberStepCloud: 32
   lightPhaseStrength: 1
   lightPhaseIns: 0.5
   lightPhaseOuts: 0.5
   lightPhaseBlend: 1
-  lightPhaseCsi: 17.1
+  lightPhaseCsi: 19.6
   lightPhaseCse: 14.6
-  lightAbsorptionThroughCloud: 0.1
-  lightAbsorptionTowardSun: 0.1
+  lightAbsorptionThroughCloud: 100
+  lightAbsorptionTowardSun: 100
   darknessThreshold: 0.01
   numberStepLight: 4
   debug_shape_noise: 0
@@ -590,7 +592,7 @@ Transform:
   m_GameObject: {fileID: 1240080118}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 8582, y: -2105, z: 203}
-  m_LocalScale: {x: 10240, y: 200, z: 10240}
+  m_LocalScale: {x: 10240, y: 1000, z: 10240}
   m_Children: []
   m_Father: {fileID: 0}
   m_RootOrder: 2
@@ -627,6 +629,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   cloudShape: 0
   samplerScale: 0.1
+  samplerHeightScale: 1
   samplerOffset: {x: 156.82, y: 145.4, z: 25.4}
   textureShape: {fileID: 11700000, guid: 70c2adccd53fd45468d11570134863c2, type: 2}
   detailShape: {fileID: 0}

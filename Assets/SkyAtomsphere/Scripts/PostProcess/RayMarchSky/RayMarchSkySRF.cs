@@ -170,7 +170,7 @@ public class RayMarchSkySRF : ScriptableRendererFeature
         _mScriptableCloudPass = new RayMarchSkyPass();
 
         // Configures where the render pass should be injected.
-        _mScriptableCloudPass.renderPassEvent = RenderPassEvent.BeforeRenderingPostProcessing-1;
+        _mScriptableCloudPass.renderPassEvent = RenderPassEvent.BeforeRenderingTransparents - 20;
     }
 
     // Here you can inject one or multiple render passes in the renderer.

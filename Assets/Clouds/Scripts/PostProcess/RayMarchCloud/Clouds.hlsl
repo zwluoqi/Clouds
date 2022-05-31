@@ -31,6 +31,7 @@ float4 boxmin;
 float4 boxmax;
 
 float samplerScale;
+float samplerHeightScale;
 float4 samplerOffset;
 float densityMultipler;
 float densityThreshold;//云层密度阀值
@@ -90,11 +91,12 @@ float lightPhase(float cosTheta)
 
 float sampleDensityBox(float3 worldPos)
 {
-    float3 texCoord = worldPos*samplerScale*0.001+samplerOffset*0.01;
-    float4 rgba = SAMPLE_TEXTURE3D_LOD(shapeNoise, sampler_shapeNoise, texCoord,0);
+    float3 samplePos = worldPos*samplerScale*0.001+samplerOffset*0.01;
+    float4 rgba = SAMPLE_TEXTURE3D_LOD(shapeNoise, sampler_shapeNoise, samplePos,0);
 
     float3 size = boxmax - boxmin;
     float wc0=rgba.r;
+    // return wc0;
     float wc1=rgba.g;
     float wh=rgba.b;
     float wd=rgba.a;
@@ -103,11 +105,12 @@ float sampleDensityBox(float3 worldPos)
     float gMin = .2;
     float gMax = .7;
     float heightPercent = (worldPos.y - boxmin.y) / size.y;
+    // return heightPercent;
     
     float heightGradient = saturate(remap(heightPercent, 0.0, gMin, 0, 1))
     * saturate(remap(heightPercent, 1, gMax, 0, 1));
-    // heightGradient *= edgeWeight;
-    
+
+
     float density = max(0,wc0-densityThreshold)*densityMultipler;
 
     
@@ -117,38 +120,44 @@ float sampleDensityBox(float3 worldPos)
 
 float sampleDensitySphere(float3 worldPos)
 {
-    float3 texCoord = worldPos*samplerScale*0.001+samplerOffset*0.01;
-    float4 rgba = SAMPLE_TEXTURE3D_LOD(shapeNoise, sampler_shapeNoise, texCoord,0);
+    float3 samplePos = worldPos*samplerScale*0.001+samplerOffset*0.01;
+    // float3 samplePos = worldPos;
+    
+    //height gridiend
+    float3 size = boxmax - boxmin;
+    // float halfHeight = size.x*0.5f;
+    float3 dir = worldPos-sphereCenter;
+    float height = length(dir);    
+    float heightPercent = saturate( (height - boxmin.x) / (size.x) );
+    
+
+    float3 normal = normalize(dir);
+    float u = samplerScale*10*atan(normal.z/normal.x) / 3.1415*2.0;
+    float v = samplerScale*10*asin(normal.y) / 3.1415*2.0 + 0.5;
+    
+    float3 textureCoord = float3(u,v,heightPercent*samplerHeightScale*0.01);
+    float4 rgba = SAMPLE_TEXTURE3D_LOD(shapeNoise, sampler_shapeNoise, textureCoord,0);
 
     float snr=rgba.r;
+
     float sng=rgba.g;
     float snb=rgba.b;
     float sna=rgba.a;
+    
 
-    float4 detail_rgba = SAMPLE_TEXTURE3D_LOD(detailNoise, sampler_detailNoise, texCoord,0);
+    float4 detail_rgba = SAMPLE_TEXTURE3D_LOD(detailNoise, sampler_detailNoise, textureCoord,0);
 
     float dnr=detail_rgba.r;
     float dng=detail_rgba.g;
     float dnb=detail_rgba.b;
     float dna=detail_rgba.a;
-
-
-    //height gridiend
-    float3 size = boxmax - boxmin;
-    float halfHeight = size.x*0.5f;
-    float3 dir = worldPos-sphereCenter;
-    float height = length(dir);    
-    float heightPercent = saturate( (height - boxmin.x-halfHeight) / (halfHeight) );
     
-    
-
     //weather map
-    // float weatherU = dot(dir,float3(1,0,0))*0.5+0.5f;
-    // float weatherV = dot(dir,float3(0,1,0))*0.5+0.5f;
+
     // float4 weatherColor = SAMPLE_TEXTURE2D_LOD(weatherMap, sampler_weatherMap,float2(weatherU,weatherV),0);
+    // return weatherColor.r;
     // float wh = weatherColor.z;//blue channel
     float wh = 1;
-    
     //
     //4 WM = max(wc0,STA(gc-0.5)*wc1*2) 云出现率<br>
     float WMc = 1;
@@ -159,6 +168,10 @@ float sampleDensitySphere(float3 worldPos)
     float SRb = SAT(remap(heightPercent, 0, 0.07, 0, 1));
     float SRt = SAT(remap(heightPercent, wh*globalThickness, wh, 1, 0));
     float SA = SRb*SRt;//[0,1]
+
+    
+    // float density2 = max(0,snr-densityThreshold)*densityMultipler;
+    // return density2*SA;
     
     // 8 DRb = ph ×SAT(R(ph, 0, 0.15, 0, 1)) 向底部降低密度<br>
     // 9 DRt = SAT(R(ph, 0.9, 1.0, 1, 0))) 向顶部的更柔和的过渡降低密度<br>
@@ -172,7 +185,9 @@ float sampleDensitySphere(float3 worldPos)
     // 12 SN = SAT(R(SNsample ×SA, 1−gc ×WMc, 1, 0, 1))×DA 
     float SNsample = remap(snr, (sng *0.625+snb *0.25+sna *0.125)-1.0f, 1, 0, 1);
     float SN =  SAT(remap(SNsample *SA, 1 - globalCoverage * WMc, 1, 0, 1))*DA;
-
+    // return SN;
+    
+    // return SN;
     //13 DNfbm = dnr ×0.625+dng ×0.25+dnb ×0.125
     //14 DNmod = 0.35×e−gc×0.75 ×Li(DNfbm, 1−DNfbm, SAT(ph ×5))
     //15 SNnd = SAT(R(SNsample ×SA, 1−gc ×WMc, 1, 0, 1))
@@ -201,16 +216,11 @@ float sampleDensity(float3 worldpos)
 }
 
 
-float lightMarching(float3 rayPos)
+float lightMarchingDensity(float3 rayPos,float3 dirToLight,float rayLength)
 {
     // return 0.0f;
-    float3 dir = _MainLightPosition.xyz;
     
-    float3 dirToLight = normalize(dir.xyz);
-    
-    float distInsideBox = RayBoxIntersection(rayPos,dirToLight,boxmin,boxmax).y;
-
-    float stepSize = distInsideBox/numberStepLight;
+    float stepSize = rayLength/numberStepLight;
     float totalDensity = 0;
     for (int step = 0;step <numberStepLight;step++)
     {
@@ -218,11 +228,10 @@ float lightMarching(float3 rayPos)
         float density = sampleDensity(rayPos);
         totalDensity += density*stepSize;
     }
+    return totalDensity;
 
-    //密度越大,穿透率越低
-    float transmittance = exp(-totalDensity*lightAbsorptionTowardSun);
     
-    return darknessThreshold + transmittance*(1-darknessThreshold);
+    // return darknessThreshold + transmittance*(1-darknessThreshold);
 }
 
 
