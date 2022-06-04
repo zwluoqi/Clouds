@@ -679,15 +679,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6879971600259984193, guid: 02a0f8c8d6c1648cbbc2f446a2ed9b13, type: 3}
       propertyPath: lightPhaseCse
-      value: 37.4
+      value: 43.5
       objectReference: {fileID: 0}
     - target: {fileID: 6879971600259984193, guid: 02a0f8c8d6c1648cbbc2f446a2ed9b13, type: 3}
       propertyPath: lightPhaseCsi
-      value: 35
+      value: 50.2
       objectReference: {fileID: 0}
     - target: {fileID: 6879971600259984193, guid: 02a0f8c8d6c1648cbbc2f446a2ed9b13, type: 3}
       propertyPath: lightPhaseIns
-      value: 0.504
+      value: 0.608
       objectReference: {fileID: 0}
     - target: {fileID: 6879971600259984193, guid: 02a0f8c8d6c1648cbbc2f446a2ed9b13, type: 3}
       propertyPath: globalCoverage
@@ -695,15 +695,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6879971600259984193, guid: 02a0f8c8d6c1648cbbc2f446a2ed9b13, type: 3}
       propertyPath: lightPhaseOuts
-      value: 0.509
+      value: 0.619
       objectReference: {fileID: 0}
     - target: {fileID: 6879971600259984193, guid: 02a0f8c8d6c1648cbbc2f446a2ed9b13, type: 3}
       propertyPath: globalThickness
-      value: 0.2
+      value: 0.394
       objectReference: {fileID: 0}
     - target: {fileID: 6879971600259984193, guid: 02a0f8c8d6c1648cbbc2f446a2ed9b13, type: 3}
       propertyPath: lightPhaseBlend
-      value: 1
+      value: 0.944
       objectReference: {fileID: 0}
     - target: {fileID: 6879971600259984193, guid: 02a0f8c8d6c1648cbbc2f446a2ed9b13, type: 3}
       propertyPath: numberStepCloud
@@ -719,7 +719,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6879971600259984193, guid: 02a0f8c8d6c1648cbbc2f446a2ed9b13, type: 3}
       propertyPath: densityThreshold
-      value: 0.204
+      value: 0.146
       objectReference: {fileID: 0}
     - target: {fileID: 6879971600259984193, guid: 02a0f8c8d6c1648cbbc2f446a2ed9b13, type: 3}
       propertyPath: darknessThreshold

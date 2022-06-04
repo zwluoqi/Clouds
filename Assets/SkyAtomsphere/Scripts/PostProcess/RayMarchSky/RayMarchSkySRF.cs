@@ -18,8 +18,8 @@ public class RayMarchSkySRF : ScriptableRendererFeature
         private Material _material;
 
         private static readonly int MainTexId = Shader.PropertyToID("_MainTex");
-        private static readonly int TmpTexId = Shader.PropertyToID("_TmpTex");
-        private static readonly int TmpTexId2 = Shader.PropertyToID("_TmpTex2");
+        private static readonly int TmpTexId = Shader.PropertyToID("_SkyTex");
+        private static readonly int TmpTexId2 = Shader.PropertyToID("_SkyTex2");
         
 
         public RayMarchSkyPass()

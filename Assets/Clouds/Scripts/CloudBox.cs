@@ -31,12 +31,15 @@ namespace Clouds
         public Texture3D textureShape;
         public Texture3D detailShape;
         public Texture2D weatherMap;
+        public Texture2D rayMarchOffsetMap;
         
         [Header ( "----Global Value" )]
         [Range(0,1)]
         public float globalCoverage = 1;
         [Min(0.01f)]
         public float globalDensity = 1;
+        [Range(0.0f, 1f)] 
+        public float globalStarHeight = 0.2f;
         [Range(0.2f,1f)]
         public float globalThickness = 0.2f;
         
@@ -57,8 +60,10 @@ namespace Clouds
         [Tooltip("光能强度")]
         public float lightPhaseStrength = 1;
         [Range(0,1)]
+        [Tooltip("前向散射")]
         public float lightPhaseIns = 0.5f;
         [Range(0,1)]
+        [Tooltip("后向散射")]
         public float lightPhaseOuts = 0.5f;
         [Range(0,1)]
         public float lightPhaseBlend = 0.5f;

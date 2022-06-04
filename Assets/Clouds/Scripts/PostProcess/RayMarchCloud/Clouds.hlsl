@@ -24,6 +24,11 @@ TEXTURE2D(_CloudTex);
 SAMPLER(sampler_CloudTex);
 
 
+TEXTURE2D(rayMarchOffsetMap);
+SAMPLER(sampler_rayMarchOffsetMap);
+
+
+
 // CBUFFER_START(UnityPerMaterial) // Required to be compatible with SRP Batcher
 float4 _MainTex_ST;
 float4 sphereCenter;
@@ -54,6 +59,7 @@ float darknessThreshold;//最低光线穿透阀值
 
 float globalCoverage;// [0, 1]
 float globalDensity;// [0, max]
+float globalStarHeight;//
 float globalThickness;// [0.2, 0.4]云层厚度
 
 
@@ -132,12 +138,12 @@ float sampleDensitySphere(float3 worldPos)
     
 
     float3 normal = normalize(dir);
-    float u = samplerScale*10*atan(normal.z/normal.x) / 3.1415*2.0 + samplerOffset.x*0.01;
-    float v = samplerScale*10*asin(normal.y) / 3.1415*2.0 + 0.5 + samplerOffset.y*0.01;
+    float u = samplerScale*0.01*atan(normal.z/normal.x) / 3.1415*2.0 + samplerOffset.x*0.01;
+    float v = samplerScale*0.01*asin(normal.y) / 3.1415*2.0 + 0.5 + samplerOffset.y*0.01;
     
     float3 textureCoord = float3(u,v,heightPercent*samplerHeightScale*0.01);
     float4 rgba = SAMPLE_TEXTURE3D_LOD(shapeNoise, sampler_shapeNoise, textureCoord,0);
-
+    
     float snr=rgba.r;
 
     float sng=rgba.g;
@@ -165,7 +171,7 @@ float sampleDensitySphere(float3 worldPos)
 //     5 SRb = SAT(R(ph, 0, 0.07, 0, 1)) 向下映射<br>
 //     6 SRt = SAT(R(ph, wh ×0.2, wh, 1, 0)) 向上映射<br>
 //     7 SA = SRb × SRt <br>
-    float SRb = SAT(remap(heightPercent, 0, 0.07, 0, 1));
+    float SRb = SAT(remap(heightPercent, 0, 0.07+globalStarHeight, 0, 1));
     float SRt = SAT(remap(heightPercent, wh*globalThickness, wh, 1, 0));
     float SA = SRb*SRt;//[0,1]
 
@@ -234,7 +240,11 @@ float lightMarchingDensity(float3 rayPos,float3 dirToLight,float rayLength)
     // return darknessThreshold + transmittance*(1-darknessThreshold);
 }
 
-
+float2 GetOptimizeRadius(float radiusMin,float radiusMax)
+{
+    float size =radiusMax-radiusMin;
+    return float2(radiusMin+globalStarHeight*size,radiusMin+globalThickness*size);
+}
 
 
 #endif

@@ -17,8 +17,8 @@ public class RayMarchCloudSRF : ScriptableRendererFeature
         private Material _material;
 
         private static readonly int MainTexId = Shader.PropertyToID("_MainTex");
-        private static readonly int TmpTexId = Shader.PropertyToID("_TmpTex");
-        private static readonly int TmpTexId2 = Shader.PropertyToID("_TmpTex2");
+        private static readonly int TmpTexId = Shader.PropertyToID("_CloudTex");
+        private static readonly int TmpTexId2 = Shader.PropertyToID("_CloudTex2");
         
 
         public RayMarchCloudPass()
@@ -95,6 +95,7 @@ public class RayMarchCloudSRF : ScriptableRendererFeature
                 cmd.SetGlobalFloat("globalCoverage",box.globalCoverage);
                 cmd.SetGlobalFloat("globalDensity",box.globalDensity);
                 cmd.SetGlobalFloat("globalThickness",box.globalThickness);
+                cmd.SetGlobalFloat("globalStarHeight",box.globalStarHeight);
                 
                 
                 cmd.SetGlobalFloat("densityMultipler",box.densityMultipler);
@@ -125,6 +126,8 @@ public class RayMarchCloudSRF : ScriptableRendererFeature
                 cmd.SetGlobalTexture("shapeNoise",box.textureShape);
                 cmd.SetGlobalTexture("detailNoise",box.detailShape);
                 cmd.SetGlobalTexture("weatherMap",box.weatherMap);
+                cmd.SetGlobalTexture("rayMarchOffsetMap",box.rayMarchOffsetMap);
+                
                 
         
                 cmd.SetGlobalFloat("debug_shape_z",box.debug_shape_z);
@@ -158,7 +161,7 @@ public class RayMarchCloudSRF : ScriptableRendererFeature
                     EnableShapeKeyWord(cmd,"SHAPE_SPHERE");
 
                     float raidu0 = localScale.x*0.5f;
-                    float raidu1 = raidu0 * 1.1f;
+                    float raidu1 = raidu0 * 1.0f;
                     float raidu2 = raidu1 * 1.2f;
                     
                     cmd.SetGlobalVector("boxmin", new Vector4(raidu1,0,0,0));
