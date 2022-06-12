@@ -37,7 +37,10 @@ Shader "Shader/RayMarchCloud"
     #include "Clouds.hlsl"
 
         #pragma multi_compile _ DEBUG_SHAPE_NOSE DEBUG_DETAIL_NOSE
-        #pragma multi_compile SHAPE_BOX SHAPE_SPHERE 
+        #pragma multi_compile SHAPE_BOX SHAPE_SPHERE
+        #pragma multi_compile _ FRAME_DIVIDE
+
+    
             
             struct Attributes
             {
@@ -81,8 +84,34 @@ Shader "Shader/RayMarchCloud"
                 
                 float4 ndcPos = (input.screenPos / input.screenPos.w);
                 float deviceDepth = SAMPLE_DEPTH_TEXTURE(_CameraDepthTexture, sampler_CameraDepthTexture, ndcPos.xy);                
-                float3 colorWorldPos = ComputeWorldSpacePosition(ndcPos.xy, deviceDepth, UNITY_MATRIX_I_VP);
 
+                
+                #ifdef FRAME_DIVIDE
+                    int frameOrder = GetIndex(ndcPos.xy, _TargetWidth, _TargetHeight, _FrameIterationCount);
+
+                    
+                    // return float4(pre_clip.xy,0,0);                
+                    // return float4(abs(pre_clip.xy- ndcPos.xy),0,0);
+                
+                    //判断当帧是否渲染该片元
+                    if (frameOrder != _FrameCount)
+                    {
+                        float3 cameraPos = ComputeViewSpacePosition(ndcPos.xy, deviceDepth, UNITY_MATRIX_I_P);
+                        float3 preWorldPos = mul(PRE_UNITY_MATRIX_I_V,float4(cameraPos,1.0f)).xyz;
+                        float3 preCameraPos = mul(unity_WorldToCamera, float4(preWorldPos,1.0f));
+    
+                        float4 pre_clip = mul(unity_CameraProjection , float4(preCameraPos,1.0f));
+                        pre_clip = ComputeScreenPos(pre_clip);
+                        pre_clip = pre_clip/pre_clip.w;
+                        pre_clip.x = 1-pre_clip.x;
+                        
+                        float4 cloudCol = SAMPLE_TEXTURE2D(_CloudTex, sampler_CloudTex,pre_clip.xy);
+                        return cloudCol;
+                    }
+                #endif
+                
+                float3 colorWorldPos = ComputeWorldSpacePosition(ndcPos.xy, deviceDepth, UNITY_MATRIX_I_VP);
+                
                 #ifdef DEBUG_SHAPE_NOSE
                     float4 rgba = SAMPLE_TEXTURE3D_LOD(shapeNoise, sampler_shapeNoise, float3(ndcPos.xy,debug_shape_z),0);
                     if (debug_rgba<4){
@@ -145,21 +174,24 @@ Shader "Shader/RayMarchCloud"
                 #endif
                 if(rayDst>0.001f){
                     float stepDst = rayDst/numberStepCloud;
-                    float4 rayMarchOffset = SAMPLE_TEXTURE2D_LOD(rayMarchOffsetMap, sampler_rayMarchOffsetMap,.1*float2(rayDir.x+rayDir.y,rayDir.y+rayDir.z),0);
-                    float startOffset = 1.0*stepDst*rayMarchOffset;
+                    float4 rayMarchOffset = SAMPLE_TEXTURE2D_LOD(rayMarchOffsetMap, sampler_rayMarchOffsetMap,offsetMapUVScale*float2(rayDir.x+rayDir.y,rayDir.y+rayDir.z),0);
+
+                    float startOffset = offsetMapValueScale*stepDst*rayMarchOffset.x;//TAA TODO
                     rayDst -= startOffset;
                     stepDst = rayDst/numberStepCloud;
-                    // return rayMarchOffset;
-                    float3 hitPoint = _WorldSpaceCameraPos.xyz + rayDir*(distToBoxHit+startOffset*0.5f);
+                    float curStep = stepDst*2;//开始步进大,遇到云后步进变小
+                    float3 hitPoint = _WorldSpaceCameraPos.xyz + rayDir*(distToBoxHit);
+                    float marchLength = startOffset*0.5f;
                     for (int step = 0;step <numberStepCloud;step++)
                     {
-                        float3 rayPos = hitPoint + rayDir*(stepDst)*(step);
+                        float3 rayPos = hitPoint + rayDir*marchLength;
   
                         float density = sampleDensity(rayPos);
                         // totalDensity+=density;
                         float lightEnergyFactor = 1;
                         if(density > 0 )
                         {
+                            curStep = stepDst;
                             float lengthToLightCould = 0;
                             #ifdef SHAPE_BOX
                                   lengthToLightCould = RayBoxIntersection(rayPos,dirToLight,boxmin,boxmax).y;
@@ -177,12 +209,17 @@ Shader "Shader/RayMarchCloud"
                                   lightEnergyFactor = 1-ditFacotr*ditFacotr*ditFacotr;
                               #endif                   
                             
-                            lightEnergy += (density * stepDst * transmittance * lightTransmittance*lightPhaseValue)*lightEnergyFactor;
-                            transmittance *= (exp(-density*stepDst*lightAbsorptionThroughCloud/cloudHeight));
+                            lightEnergy += (density * curStep * transmittance * lightTransmittance*lightPhaseValue)*lightEnergyFactor;
+                            transmittance *= (exp(-density*curStep*lightAbsorptionThroughCloud/cloudHeight));
                             if(transmittance < 0.001)
                             {
                                 break;
                             }
+                        }
+                        marchLength += (curStep);
+                        if(marchLength>rayDst)
+                        {
+                            break;
                         }
                     }
                }

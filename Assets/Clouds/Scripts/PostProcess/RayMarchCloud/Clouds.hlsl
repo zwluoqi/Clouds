@@ -41,6 +41,8 @@ float4 samplerOffset;
 float densityMultipler;
 float densityThreshold;//云层密度阀值
 int numberStepCloud;//云层密度检测步进
+float offsetMapUVScale;
+float offsetMapValueScale;
 
 float lightPhaseStrength;//光线穿透能力
 float lightPhaseIns;//[0,1]
@@ -54,6 +56,7 @@ float lightAbsorptionThroughCloud;//云层对光的吸收率
 
 
 int numberStepLight;//管线传播步进
+
 float lightAbsorptionTowardSun;//云层对光的吸收率
 float darknessThreshold;//最低光线穿透阀值
 
@@ -66,6 +69,13 @@ float globalThickness;// [0.2, 0.4]云层厚度
 
 float debug_shape_z;
 float debug_rgba;
+
+
+int _TargetWidth;
+int _TargetHeight;
+int _FrameCount;
+int _FrameIterationCount;//2,4
+float4x4 PRE_UNITY_MATRIX_I_V;
 // CBUFFER_END
 
 
@@ -139,7 +149,7 @@ float sampleDensitySphere(float3 worldPos)
 
     float3 normal = normalize(dir);
     float u = samplerScale*0.01*atan(normal.z/normal.x) / 3.1415*2.0 + samplerOffset.x*0.01;
-    float v = samplerScale*0.01*asin(normal.y) / 3.1415*2.0 + 0.5 + samplerOffset.y*0.01;
+    float v = samplerScale*0.01*asin(normal.y) / 3.1415*2.0 + samplerOffset.y*0.01;
     
     float3 textureCoord = float3(u,v,heightPercent*samplerHeightScale*0.01);
     float4 rgba = SAMPLE_TEXTURE3D_LOD(shapeNoise, sampler_shapeNoise, textureCoord,0);
@@ -174,7 +184,7 @@ float sampleDensitySphere(float3 worldPos)
     float SRb = SAT(remap(heightPercent, 0, 0.07+globalStarHeight, 0, 1));
     float SRt = SAT(remap(heightPercent, wh*globalThickness, wh, 1, 0));
     float SA = SRb*SRt;//[0,1]
-
+    // return SA;
     
     // float density2 = max(0,snr-densityThreshold)*densityMultipler;
     // return density2*SA;
@@ -246,5 +256,34 @@ float2 GetOptimizeRadius(float radiusMin,float radiusMax)
     return float2(radiusMin+globalStarHeight*size,radiusMin+globalThickness*size);
 }
 
+
+//获取索引， 给定一个uv， 纹理宽度高度，以及要分帧的次数，返回当前uv所对应的迭代索引
+int GetIndex(float2 uv, int width, int height, int iterationCount)
+{
+    //分帧渲染时的顺序索引
+    int FrameOrder_2x2[] = {
+        0, 2, 3, 1
+    };
+    int FrameOrder_4x4[] = {
+        0, 8, 2, 10,
+        12, 4, 14, 6,
+        3, 11, 1, 9,
+        15, 7, 13, 5
+    };
+    
+    int x = floor(uv.x * width / 8) % iterationCount;
+    int y = floor(uv.y * height / 8) % iterationCount;
+    int index = x + y * iterationCount;
+    
+    if (iterationCount == 2)
+    {
+        index = FrameOrder_2x2[index];
+    }
+    if(iterationCount == 4)
+    {
+        index = FrameOrder_4x4[index];
+    }
+    return index;
+}
 
 #endif

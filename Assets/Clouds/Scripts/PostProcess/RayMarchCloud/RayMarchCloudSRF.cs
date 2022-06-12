@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Clouds;
 using UnityEngine;
 using UnityEngine.Rendering;
@@ -19,8 +20,18 @@ public class RayMarchCloudSRF : ScriptableRendererFeature
         private static readonly int MainTexId = Shader.PropertyToID("_MainTex");
         private static readonly int TmpTexId = Shader.PropertyToID("_CloudTex");
         private static readonly int TmpTexId2 = Shader.PropertyToID("_CloudTex2");
-        
 
+
+        // private int TmpWidth;
+        // private int TmpHeight;
+        public Dictionary<int, CameraFrameData> _CloudCameraDatas = new Dictionary<int, CameraFrameData>();
+
+        public class CameraFrameData
+        {
+            public RenderTexture cloudTex;
+            public Matrix4x4 previousView2WorldMat;
+            public int frameCount = 0;
+        }
         public RayMarchCloudPass()
         {
             
@@ -44,7 +55,24 @@ public class RayMarchCloudSRF : ScriptableRendererFeature
             ConfigureInput(ScriptableRenderPassInput.Normal|ScriptableRenderPassInput.Depth|ScriptableRenderPassInput.Color);
 
         }
-
+        
+        bool EnsureRenderTarget(ref RenderTexture rt, int width, int height, RenderTextureFormat format, FilterMode filterMode, int depthBits = 0, int antiAliasing = 1)
+        {
+            if (rt != null && (rt.width != width || rt.height != height || rt.format != format || rt.filterMode != filterMode || rt.antiAliasing != antiAliasing))
+            {
+                RenderTexture.ReleaseTemporary(rt);
+                rt = null;
+            }
+            if (rt == null)
+            {
+                rt = RenderTexture.GetTemporary(width, height, depthBits, format, RenderTextureReadWrite.Default, antiAliasing);
+                rt.filterMode = filterMode;
+                rt.wrapMode = TextureWrapMode.Clamp;
+                return true;// new target
+            }
+            return false;// same target
+        }
+        
         // Here you can implement the rendering logic.
         // Use <c>ScriptableRenderContext</c> to issue drawing commands or execute command buffers
         // https://docs.unity3d.com/ScriptReference/Rendering.ScriptableRenderContext.html
@@ -68,11 +96,24 @@ public class RayMarchCloudSRF : ScriptableRendererFeature
 
             var w = renderingData.cameraData.camera.scaledPixelWidth;
             var h = renderingData.cameraData.camera.scaledPixelHeight;
+            var cameraKey = renderingData.cameraData.camera.GetInstanceID();
             
+            this._CloudCameraDatas.TryGetValue(cameraKey,out var _CloudData);
+            if (_CloudData == null)
+            {
+                _CloudData = new CameraFrameData();
+                this._CloudCameraDatas[cameraKey] = _CloudData;
+            }
+
+            _CloudData.frameCount++;
             var soruce = _renderTargetIdentifier;
-            cmd.GetTemporaryRT(TmpTexId,w/2,h/2,0,FilterMode.Point, RenderTextureFormat.Default);
-            cmd.GetTemporaryRT(TmpTexId2,w,h,0,FilterMode.Point, RenderTextureFormat.Default);
-            // cmd.GetTemporaryRT(TmpTexId3,w,h,0,FilterMode.Point, RenderTextureFormat.Default);
+            bool newRt = EnsureRenderTarget(ref _CloudData.cloudTex, w / 2, h / 2, RenderTextureFormat.ARGB32, FilterMode.Point);
+            if (newRt)
+            {
+                Matrix4x4 initWorldToCameraMatrix = Matrix4x4.Scale(new Vector3(1.0f, 1.0f, -1.0f)) * renderingData.cameraData.GetViewMatrix();
+                _CloudData.previousView2WorldMat = initWorldToCameraMatrix.inverse;//Matrix4x4.Inverse();
+            }
+            cmd.GetTemporaryRT(TmpTexId2,w,h,0,FilterMode.Point, RenderTextureFormat.ARGB32);
             
             for (int i = 0; i < cloudBoxes.Length; i++)
             {
@@ -128,10 +169,36 @@ public class RayMarchCloudSRF : ScriptableRendererFeature
                 cmd.SetGlobalTexture("weatherMap",box.weatherMap);
                 cmd.SetGlobalTexture("rayMarchOffsetMap",box.rayMarchOffsetMap);
                 
-                
+                cmd.SetGlobalFloat("offsetMapUVScale",box.offsetMapUVScale);
+                cmd.SetGlobalFloat("offsetMapValueScale",box.offsetMapValueScale);
+
+                if (box._DebugFrameCount != 0)
+                {
+                    cmd.SetGlobalInt("_FrameCount", box._DebugFrameCount-1);
+                }
+                else
+                {
+                    var f = _CloudData.frameCount % 16;
+                    cmd.SetGlobalInt("_FrameCount", f);
+                }
+
+                cmd.SetGlobalInt("_FrameIterationCount", box.FrameIterationMode == 0 ? 2 : 4);
+                cmd.SetGlobalInt("_TargetWidth",w/2);
+                cmd.SetGlobalInt("_TargetHeight",h/2);
+                cmd.SetGlobalMatrix("PRE_UNITY_MATRIX_I_V",_CloudData.previousView2WorldMat);
         
                 cmd.SetGlobalFloat("debug_shape_z",box.debug_shape_z);
                 cmd.SetGlobalInt("debug_rgba",(int)box.debug_rgba);
+
+
+                if (box._FrameDivide)
+                {
+                    cmd.EnableShaderKeyword("FRAME_DIVIDE");
+                }
+                else
+                {
+                    cmd.DisableShaderKeyword("FRAME_DIVIDE");
+                }
                 
                 if (box.debug_shape_noise == DEBUG_SHAPE.SHAPE)
                 {
@@ -168,18 +235,24 @@ public class RayMarchCloudSRF : ScriptableRendererFeature
                     cmd.SetGlobalVector("boxmax", new Vector4(raidu2,0,0,0));
                     cmd.SetGlobalVector("sphereCenter", boxcenter);
                 }
-                
 
-                cmd.Blit(null,TmpTexId,_material,0);
+                cmd.SetGlobalTexture("_CloudTex",_CloudData.cloudTex);
+                cmd.Blit(null,_CloudData.cloudTex,_material,0);
                 cmd.SetGlobalTexture(MainTexId,soruce);
-                cmd.SetGlobalTexture("_CloudTex",TmpTexId);
+                cmd.SetGlobalTexture("_CloudTex",_CloudData.cloudTex);
                 cmd.Blit(soruce,TmpTexId2,_material,1);
                 cmd.Blit(TmpTexId2, soruce);
             }
+            
+            cmd.ReleaseTemporaryRT(TmpTexId2);
+            
             context.ExecuteCommandBuffer(cmd);
 
             CommandBufferPool.Release(cmd);
 
+            // previousView2WorldMat = renderingData.cameraData.camera.cameraToWorldMatrix;
+            Matrix4x4 worldToCameraMatrix = Matrix4x4.Scale(new Vector3(1.0f, 1.0f, -1.0f)) * renderingData.cameraData.GetViewMatrix();
+            _CloudData.previousView2WorldMat = worldToCameraMatrix.inverse;//Matrix4x4.Inverse();
         }
 
         private void EnableDebugShapeKeyWord(CommandBuffer cmd, string debugShapeNose)

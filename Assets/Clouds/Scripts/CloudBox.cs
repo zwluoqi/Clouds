@@ -19,7 +19,7 @@ namespace Clouds
         public CloudShape cloudShape = CloudShape.BOX;
         
         
-        [Header ( "Density" )]
+        [Header ( "密度系数" )]
         [Min(0.001f)]
         public float samplerScale = 1;
         [Min(0.001f)]
@@ -27,13 +27,17 @@ namespace Clouds
         public Vector3 samplerOffset = Vector3.zero;
         
         
-        [Header ( "----Shape Noise" )]
+        [Header ( "----噪声贴图" )]
         public Texture3D textureShape;
         public Texture3D detailShape;
         public Texture2D weatherMap;
         public Texture2D rayMarchOffsetMap;
+
+        [Header("----RayMarch出发点采样偏移系数")] 
+        public float offsetMapUVScale = 1;
+        public float offsetMapValueScale = 1;
         
-        [Header ( "----Global Value" )]
+        [Header ( "----全局密度系数" )]
         [Range(0,1)]
         public float globalCoverage = 1;
         [Min(0.01f)]
@@ -50,12 +54,12 @@ namespace Clouds
         public float densityMultipler = 1;
 
 
-        [Header ( "Lighting" )]
+        [Header ( "光照" )]
         [Range(1,256)]
         [Tooltip("云层光线步进数量")]
         public int numberStepCloud = 100;
         
-        [Header ( "----Henyey-Greenstein’s" )]
+        [Header ( "----Henyey-Greenstein" )]
         [Min(0.01f)]
         [Tooltip("光能强度")]
         public float lightPhaseStrength = 1;
@@ -90,6 +94,7 @@ namespace Clouds
         [Tooltip("太阳光线步进数量")]
         public int numberStepLight = 100;
         
+
         [Header ( "Debug" )]
         public DEBUG_SHAPE debug_shape_noise;
         
@@ -97,6 +102,16 @@ namespace Clouds
         public float debug_shape_z;
 
         public RGBA_DEBUG debug_rgba = RGBA_DEBUG.ALL;
+
+
+        [Header("----分帧渲染")]
+        public bool _FrameDivide;
+        public bool _DebugFrameDivide;
+        [Range(0, 16)] 
+        public int _DebugFrameCount = 0;
+        [Range(0, 1)] 
+        public int FrameIterationMode = 0;
+
     }
 
     public enum DEBUG_SHAPE
