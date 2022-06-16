@@ -119,6 +119,7 @@ namespace Clouds
         NONE,
         SHAPE,
         DETAIL,
+        DEBUG_SHAPE_DENSITY_UV,
     }
     public enum RGBA_DEBUG
     {

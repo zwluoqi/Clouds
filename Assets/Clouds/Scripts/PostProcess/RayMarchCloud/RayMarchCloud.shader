@@ -36,7 +36,7 @@ Shader "Shader/RayMarchCloud"
     #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
     #include "Clouds.hlsl"
 
-        #pragma multi_compile _ DEBUG_SHAPE_NOSE DEBUG_DETAIL_NOSE
+        #pragma multi_compile _ DEBUG_SHAPE_NOSE DEBUG_DETAIL_NOSE DEBUG_SHAPE_DENSITY_UV
         #pragma multi_compile SHAPE_BOX SHAPE_SPHERE
         #pragma multi_compile _ FRAME_DIVIDE
 
@@ -173,6 +173,16 @@ Shader "Shader/RayMarchCloud"
                     cloudHeight = (boxmax.x-boxmin.x);
                 #endif
                 if(rayDst>0.001f){
+
+                    #ifdef DEBUG_SHAPE_DENSITY_UV
+                    
+                    float3 textureCoord = GetUVWH(colorWorldPos,cloudHeight);
+                    // textureCoord = frac(textureCoord);
+                    // return float4(textureCoord,0);
+                    float4 rgba = SAMPLE_TEXTURE3D_LOD(shapeNoise, sampler_shapeNoise, textureCoord,0);
+                    return float4(rgba.rgb,0);
+                    #endif
+                    
                     float stepDst = rayDst/numberStepCloud;
                     float4 rayMarchOffset = SAMPLE_TEXTURE2D_LOD(rayMarchOffsetMap, sampler_rayMarchOffsetMap,offsetMapUVScale*float2(rayDir.x+rayDir.y,rayDir.y+rayDir.z),0);
 

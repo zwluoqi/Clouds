@@ -60,6 +60,7 @@ int numberStepLight;//管线传播步进
 float lightAbsorptionTowardSun;//云层对光的吸收率
 float darknessThreshold;//最低光线穿透阀值
 
+float cloud_anvil_amount;//[0,1]
 float globalCoverage;// [0, 1]
 float globalDensity;// [0, max]
 float globalStarHeight;//
@@ -78,6 +79,34 @@ int _FrameIterationCount;//2,4
 float4x4 PRE_UNITY_MATRIX_I_V;
 // CBUFFER_END
 
+float2 getUniformUV(float3 xyz)
+{
+    float theta = acos(xyz.y);
+    float u = 0.5f * (1 - cos(theta));
+
+    float xz = sqrt(1-xyz.y*xyz.y);
+    float phi = acos(xyz.x / xz);
+    float v = phi / ( PI);
+    return float2(v,1-u);
+}
+
+float4 GetUVWH(float3 colorWorldPos,float cloudHeight)
+{
+    float3 dir = colorWorldPos-sphereCenter;
+    float height = length(dir);    
+    float heightPercent = saturate( (height - boxmin.x) / cloudHeight );
+    float3 normal = normalize(dir);
+    float base_u = atan(normal.z/normal.x)/ 3.1415 + 0.5;
+    float base_v = asin(normal.y)/ 3.1415 +0.5f;
+    float2 base_uv = getUniformUV(normal);
+    base_u = base_uv.x;
+    base_v = base_uv.y;
+    float u = samplerScale*0.01* base_u + samplerOffset.x*0.01;
+    float v = samplerScale*0.01* base_v + samplerOffset.y*0.01;
+                    
+    float4 textureCoord = float4(u,v,heightPercent*samplerHeightScale*0.01,heightPercent);
+    return textureCoord;
+}
 
 float SAT(float v)
 {
@@ -133,25 +162,48 @@ float sampleDensityBox(float3 worldPos)
     return density*heightGradient;
 }
 
+float HeightAlter(float heightPercent)
+{
+    // float4 weatherColor = SAMPLE_TEXTURE2D_LOD(weatherMap, sampler_weatherMap,float2(weatherU,weatherV),0);
+    // return weatherColor.r;
+    // float wh = weatherColor.z;//blue channel
+    float wh = 1;
+    //     5 SRb = SAT(R(ph, 0, 0.07, 0, 1)) 向下映射<br>
+    //     6 SRt = SAT(R(ph, wh ×0.2, wh, 1, 0)) 向上映射<br>
+    //     7 SA = SRb × SRt <br>
+    float SRb = SAT(remap(heightPercent, 0, 0.07+globalStarHeight, 0, 1));
+    float SRt = SAT(remap(heightPercent, wh*globalThickness, wh, 1, 0));
+    float SA = SRb*SRt;//[0,1]
+
+    //Apply anvil (cumulonimbus/"giant storm" clouds)
+    //SA = pow(SA,SAT(remap(heightPercent,0.65,0.95,1.0,(1-cloud_anvil_amount*globalCoverage))));
+    
+    return SA;
+}
+
+
+float DensityAlter(float heightPercent)
+{
+    float wd = 0.25;
+    // 8 DRb = ph ×SAT(R(ph, 0, 0.15, 0, 1)) 向底部降低密度<br>
+    // 9 DRt = SAT(R(ph, 0.9, 1.0, 1, 0))) 向顶部的更柔和的过渡降低密度<br>
+    // 10 DA = gd × DRb × DRt × wd × 2 密度融合<br>
+    
+    float DRb = heightPercent*SAT(remap(heightPercent, 0,  0.15, 0, 1));
+    float DRt = SAT(remap(heightPercent, 0.9, 1, 1, 0));
+    ////Reduce density for the anvil (cumulonimbus clouds) TODO
+    float DA = globalDensity*DRb*DRt*wd*2;//[0,max]
+
+    return DA;
+}
 
 float sampleDensitySphere(float3 worldPos)
 {
-    float3 samplePos = worldPos*samplerScale*0.001+samplerOffset*0.01;
-    // float3 samplePos = worldPos;
-    
-    //height gridiend
     float3 size = boxmax - boxmin;
-    // float halfHeight = size.x*0.5f;
-    float3 dir = worldPos-sphereCenter;
-    float height = length(dir);    
-    float heightPercent = saturate( (height - boxmin.x) / (size.x) );
     
-
-    float3 normal = normalize(dir);
-    float u = samplerScale*0.01*atan(normal.z/normal.x) / 3.1415*2.0 + samplerOffset.x*0.01;
-    float v = samplerScale*0.01*asin(normal.y) / 3.1415*2.0 + samplerOffset.y*0.01;
-    
-    float3 textureCoord = float3(u,v,heightPercent*samplerHeightScale*0.01);
+    float4 uvwh = GetUVWH(worldPos,size);
+    float heightPercent = uvwh.w;
+    float3 textureCoord = uvwh.xyz;
     float4 rgba = SAMPLE_TEXTURE3D_LOD(shapeNoise, sampler_shapeNoise, textureCoord,0);
     
     float snr=rgba.r;
@@ -170,37 +222,21 @@ float sampleDensitySphere(float3 worldPos)
     
     //weather map
 
-    // float4 weatherColor = SAMPLE_TEXTURE2D_LOD(weatherMap, sampler_weatherMap,float2(weatherU,weatherV),0);
-    // return weatherColor.r;
-    // float wh = weatherColor.z;//blue channel
-    float wh = 1;
+
     //
     //4 WM = max(wc0,STA(gc-0.5)*wc1*2) 云出现率<br>
     float WMc = 1;
-    
-//     5 SRb = SAT(R(ph, 0, 0.07, 0, 1)) 向下映射<br>
-//     6 SRt = SAT(R(ph, wh ×0.2, wh, 1, 0)) 向上映射<br>
-//     7 SA = SRb × SRt <br>
-    float SRb = SAT(remap(heightPercent, 0, 0.07+globalStarHeight, 0, 1));
-    float SRt = SAT(remap(heightPercent, wh*globalThickness, wh, 1, 0));
-    float SA = SRb*SRt;//[0,1]
-    // return SA;
-    
+
+    float heightAlter = HeightAlter(heightPercent);
     // float density2 = max(0,snr-densityThreshold)*densityMultipler;
     // return density2*SA;
-    
-    // 8 DRb = ph ×SAT(R(ph, 0, 0.15, 0, 1)) 向底部降低密度<br>
-    // 9 DRt = SAT(R(ph, 0.9, 1.0, 1, 0))) 向顶部的更柔和的过渡降低密度<br>
-    // 10 DA = gd × DRb × DRt × wd × 2 密度融合<br>
-    
-    float DRb = SAT(remap(heightPercent, 0,  0.15, 0, 1));
-    float DRt = SAT(remap(heightPercent, 0.9, 1, 1, 0));
-    float DA = globalDensity*DRb*DRt*1*0.25;//[0,max]
+    float densityAlter = DensityAlter(heightPercent);
 
     // 11 SNsample = R(snr, (sng ×0.625+snb ×0.25+sna ×0.125)−1, 1, 0, 1)  FBM gba <br>
-    // 12 SN = SAT(R(SNsample ×SA, 1−gc ×WMc, 1, 0, 1))×DA 
-    float SNsample = remap(snr, (sng *0.625+snb *0.25+sna *0.125)-1.0f, 1, 0, 1);
-    float SN =  SAT(remap(SNsample *SA, 1 - globalCoverage * WMc, 1, 0, 1))*DA;
+    // 12 SN = SAT(R(SNsample ×SA, 1−gc ×WMc, 1, 0, 1))×DA
+    float shape_noise = (sng *0.625+snb *0.25+sna *0.125);
+    float SNsample = remap(snr, -(shape_noise-1.0f), 1, 0, 1);
+    float SN =  SAT(remap(SNsample *heightAlter, 1 - globalCoverage * WMc, 1, 0, 1))*densityAlter;
     // return SN;
     
     // return SN;
@@ -210,13 +246,14 @@ float sampleDensitySphere(float3 worldPos)
     //16 d = SAT(R(SNnd, DNmod, 1, 0, 1)))×DA
     float DNfbm = dnr *0.625+dng *0.25+dnb *0.125;
     float DNmod = 0.35*exp(-globalCoverage*0.75f)*lerp(DNfbm, 1-DNfbm, SAT(heightPercent *5));
-    float SNnd = SAT(remap(SNsample *SA, 1 - globalCoverage * WMc, 1, 0, 1));
-    float d = SAT(remap(SNnd, DNmod, 1, 0, 1))*DA;
+    float SNnd = SAT(remap(SNsample * heightAlter, 1 - globalCoverage * WMc, 1, 0, 1));
+    float d = SAT(remap(SNnd, DNmod, 1, 0, 1))*densityAlter;
     
     float density = d;
 
     return density;
 }
+
 
 
 

@@ -208,6 +208,10 @@ public class RayMarchCloudSRF : ScriptableRendererFeature
                 {
                     EnableDebugShapeKeyWord(cmd,"DEBUG_DETAIL_NOSE");
                 }
+                else if(box.debug_shape_noise == DEBUG_SHAPE.DEBUG_SHAPE_DENSITY_UV)
+                {
+                    EnableDebugShapeKeyWord(cmd,"DEBUG_SHAPE_DENSITY_UV");
+                }
                 else
                 {
                     EnableDebugShapeKeyWord(cmd,"");
@@ -259,6 +263,7 @@ public class RayMarchCloudSRF : ScriptableRendererFeature
         {
             cmd.DisableShaderKeyword("DEBUG_SHAPE_NOSE");
             cmd.DisableShaderKeyword("DEBUG_DETAIL_NOSE");
+            cmd.DisableShaderKeyword("DEBUG_SHAPE_DENSITY_UV");
             if (!string.IsNullOrEmpty(debugShapeNose))
             {
                 cmd.EnableShaderKeyword(debugShapeNose);    
