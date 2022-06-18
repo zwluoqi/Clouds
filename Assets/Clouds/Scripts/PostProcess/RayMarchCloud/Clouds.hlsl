@@ -23,6 +23,8 @@ SAMPLER(sampler_MainTex);
 TEXTURE2D(_CloudTex);
 SAMPLER(sampler_CloudTex);
 
+TEXTURE2D(_PreTex);
+SAMPLER(sampler_PreTex);
 
 TEXTURE2D(rayMarchOffsetMap);
 SAMPLER(sampler_rayMarchOffsetMap);
@@ -76,7 +78,12 @@ int _TargetWidth;
 int _TargetHeight;
 int _FrameCount;
 int _FrameIterationCount;//2,4
-float4x4 PRE_UNITY_MATRIX_I_V;
+int _TotalFrameCount;
+float4x4 _InverseProjection;
+float4x4 _InverseRotation;
+float4x4 _PreviousRotation;
+float4x4 _Projection;
+
 // CBUFFER_END
 
 float2 getUniformUV(float3 xyz)
@@ -90,17 +97,35 @@ float2 getUniformUV(float3 xyz)
     return float2(v,1-u);
 }
 
+float2 getCircleUV(float3 xyz)
+{
+    float theta = acos(xyz.y);
+    float xz = sqrt(1-xyz.y*xyz.y);
+    float phi = atan(xyz.z / xyz.x);
+    
+    float u = (phi / ( PI) + 0.5);
+    float v = (PI - theta) / PI;
+    return float2(u,v);
+}
+#define PI2 6.283185307179586476924f
+
+
 float4 GetUVWH(float3 colorWorldPos,float cloudHeight)
 {
     float3 dir = colorWorldPos-sphereCenter;
     float height = length(dir);    
     float heightPercent = saturate( (height - boxmin.x) / cloudHeight );
     float3 normal = normalize(dir);
-    float base_u = atan(normal.z/normal.x)/ 3.1415 + 0.5;
-    float base_v = asin(normal.y)/ 3.1415 +0.5f;
+    // float base_u = atan(normal.z/normal.x)/ PI + 0.5;
+    // float base_v = asin(normal.y)/ PI +0.5f;
+
+    
     float2 base_uv = getUniformUV(normal);
-    base_u = base_uv.x;
-    base_v = base_uv.y;
+    // float u = base_uv.x;
+    // float v = base_uv.y;
+    // return float4(base_uv.x,0,0,0);
+    float base_u = base_uv.x;
+    float base_v = base_uv.y;
     float u = samplerScale*0.01* base_u + samplerOffset.x*0.01;
     float v = samplerScale*0.01* base_v + samplerOffset.y*0.01;
                     
@@ -162,12 +187,13 @@ float sampleDensityBox(float3 worldPos)
     return density*heightGradient;
 }
 
-float HeightAlter(float heightPercent)
+float HeightAlter(float heightPercent,float wh)
 {
+    wh= 1;
     // float4 weatherColor = SAMPLE_TEXTURE2D_LOD(weatherMap, sampler_weatherMap,float2(weatherU,weatherV),0);
     // return weatherColor.r;
     // float wh = weatherColor.z;//blue channel
-    float wh = 1;
+    // float wh = 1;
     //     5 SRb = SAT(R(ph, 0, 0.07, 0, 1)) 向下映射<br>
     //     6 SRt = SAT(R(ph, wh ×0.2, wh, 1, 0)) 向上映射<br>
     //     7 SA = SRb × SRt <br>
@@ -182,9 +208,10 @@ float HeightAlter(float heightPercent)
 }
 
 
-float DensityAlter(float heightPercent)
+float DensityAlter(float heightPercent,float wd)
 {
-    float wd = 0.25;
+    wd=0.25;
+    // float wd = 0.25;
     // 8 DRb = ph ×SAT(R(ph, 0, 0.15, 0, 1)) 向底部降低密度<br>
     // 9 DRt = SAT(R(ph, 0.9, 1.0, 1, 0))) 向顶部的更柔和的过渡降低密度<br>
     // 10 DA = gd × DRb × DRt × wd × 2 密度融合<br>
@@ -221,16 +248,24 @@ float sampleDensitySphere(float3 worldPos)
     float dna=detail_rgba.a;
     
     //weather map
-
-
+    // R(wc0) G(wc1) coverage ,<br>
+    // B(wh) cloud height<br>
+    // B(wd) cloud density<br>
+    // float4 weatherColor = SAMPLE_TEXTURE2D_LOD(weatherMap, sampler_weatherMap,float2(textureCoord.x,textureCoord.z),0);
+    
+    // float wc0 = weatherColor.r;
+    // float wc1 = weatherColor.g;
+    // float wh = weatherColor.b;
+    // float wd = weatherColor.a;
+    // return  wh;
     //
     //4 WM = max(wc0,STA(gc-0.5)*wc1*2) 云出现率<br>
     float WMc = 1;
 
-    float heightAlter = HeightAlter(heightPercent);
+    float heightAlter = HeightAlter(heightPercent,1);
     // float density2 = max(0,snr-densityThreshold)*densityMultipler;
     // return density2*SA;
-    float densityAlter = DensityAlter(heightPercent);
+    float densityAlter = DensityAlter(heightPercent,0.25);
 
     // 11 SNsample = R(snr, (sng ×0.625+snb ×0.25+sna ×0.125)−1, 1, 0, 1)  FBM gba <br>
     // 12 SN = SAT(R(SNsample ×SA, 1−gc ×WMc, 1, 0, 1))×DA

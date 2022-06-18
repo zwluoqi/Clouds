@@ -80,8 +80,6 @@ Shader "Shader/RayMarchCloud"
                 
             half4 FragCloud(Varyings input) : SV_Target
             {
-
-                
                 float4 ndcPos = (input.screenPos / input.screenPos.w);
                 float deviceDepth = SAMPLE_DEPTH_TEXTURE(_CameraDepthTexture, sampler_CameraDepthTexture, ndcPos.xy);                
 
@@ -89,24 +87,10 @@ Shader "Shader/RayMarchCloud"
                 #ifdef FRAME_DIVIDE
                     int frameOrder = GetIndex(ndcPos.xy, _TargetWidth, _TargetHeight, _FrameIterationCount);
 
-                    
-                    // return float4(pre_clip.xy,0,0);                
-                    // return float4(abs(pre_clip.xy- ndcPos.xy),0,0);
-                
                     //判断当帧是否渲染该片元
                     if (frameOrder != _FrameCount)
                     {
-                        float3 cameraPos = ComputeViewSpacePosition(ndcPos.xy, deviceDepth, UNITY_MATRIX_I_P);
-                        float3 preWorldPos = mul(PRE_UNITY_MATRIX_I_V,float4(cameraPos,1.0f)).xyz;
-                        float3 preCameraPos = mul(unity_WorldToCamera, float4(preWorldPos,1.0f));
-    
-                        float4 pre_clip = mul(unity_CameraProjection , float4(preCameraPos,1.0f));
-                        pre_clip = ComputeScreenPos(pre_clip);
-                        pre_clip = pre_clip/pre_clip.w;
-                        pre_clip.x = 1-pre_clip.x;
-                        
-                        float4 cloudCol = SAMPLE_TEXTURE2D(_CloudTex, sampler_CloudTex,pre_clip.xy);
-                        return cloudCol;
+                        return 0;
                     }
                 #endif
                 
@@ -156,11 +140,6 @@ Shader "Shader/RayMarchCloud"
                     float distToBoxHit = 0;
                 #endif
 
-                float3 dirToLight = normalize(_MainLightPosition.xyz);
-                float cosTheta = dot(rayDir,dirToLight);
-                // return cosTheta;
-                float lightPhaseValue = lightPhase(cosTheta)*lightPhaseStrength;
-                // return lightPhaseValue;
   
                 float totalLightTransmittance = 0;
                 float lightEnergy = 0;
@@ -172,13 +151,37 @@ Shader "Shader/RayMarchCloud"
                 #elif SHAPE_SPHERE
                     cloudHeight = (boxmax.x-boxmin.x);
                 #endif
+
+
                 if(rayDst>0.001f){
 
+                    float3 dirToLight = normalize(_MainLightPosition.xyz);
+                    float cosTheta = dot(-rayDir,dirToLight);
+                    // return cosTheta;
+                    // float isex = ISextra(cosTheta);
+                    // return isex;
+                    // float hgInsValue = hg(cosTheta,lightPhaseIns);
+                    // return hgInsValue;
+                    // float hgOutValue = hg(cosTheta,-lightPhaseOuts);
+                    // return hgOutValue;
+                    float lightPhaseValue = lightPhase(cosTheta)*lightPhaseStrength;
+                    // return lightPhaseValue;
+
+                    
+                    
                     #ifdef DEBUG_SHAPE_DENSITY_UV
                     
                     float3 textureCoord = GetUVWH(colorWorldPos,cloudHeight);
                     // textureCoord = frac(textureCoord);
                     // return float4(textureCoord,0);
+
+                    // float4 weatherColor = SAMPLE_TEXTURE2D_LOD(weatherMap, sampler_weatherMap,float2(textureCoord.x,textureCoord.z),0);
+                    //
+                    // float wc0 = weatherColor.r;
+                    // float wc1 = weatherColor.g;
+                    // float wh = weatherColor.b;
+                    // float wd = weatherColor.a;
+                    // return float4(wd,0,0,0);
                     float4 rgba = SAMPLE_TEXTURE3D_LOD(shapeNoise, sampler_shapeNoise, textureCoord,0);
                     return float4(rgba.rgb,0);
                     #endif
@@ -211,13 +214,15 @@ Shader "Shader/RayMarchCloud"
                             
                         
                             float lightDensity = lightMarchingDensity(rayPos,dirToLight,lengthToLightCould);
-                            float lightTransmittance = exp(-lightDensity*lightAbsorptionTowardSun/cloudHeight)*(1-darknessThreshold)+darknessThreshold;
+                            float d = lightDensity*lightAbsorptionTowardSun/cloudHeight;
+                            //2*exp(-d)*(1-exp(-2*d))
+                            float lightTransmittance = (exp(-d))*(1-darknessThreshold)+darknessThreshold;
                             totalLightTransmittance += lightTransmittance;
   
-                              #ifdef SHAPE_SPHERE
+                            #ifdef SHAPE_SPHERE
                                   float ditFacotr = lengthToLightCould/(2*radius.x);
                                   lightEnergyFactor = 1-ditFacotr*ditFacotr*ditFacotr;
-                              #endif                   
+                            #endif                   
                             
                             lightEnergy += (density * curStep * transmittance * lightTransmittance*lightPhaseValue)*lightEnergyFactor;
                             transmittance *= (exp(-density*curStep*lightAbsorptionThroughCloud/cloudHeight));
@@ -232,12 +237,12 @@ Shader "Shader/RayMarchCloud"
                             break;
                         }
                     }
-               }
-
-
-              float4 cloudCol = lightEnergy*_MainLightColor;
-
-              return float4(cloudCol.rgb,transmittance);
+                }
+                float4 backgroundCol = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex,ndcPos.xy);
+                float4 cloudCol = lightEnergy*_MainLightColor;
+                
+                return float4(backgroundCol.xyz*transmittance+cloudCol.rgb,1);
+                // return float4(cloudCol.rgb,transmittance);
             }
 
             half4 FragBlend(Varyings input) : SV_Target{
@@ -246,6 +251,67 @@ Shader "Shader/RayMarchCloud"
                 float4 cloudCol = SAMPLE_TEXTURE2D(_CloudTex, sampler_CloudTex,ndcPos.xy);
                 return float4(backgroundCol.xyz*cloudCol.a+cloudCol.xyz,1);
             }
+
+            float4 GetPreClipFun(float2 uv,float4x4 _InverseProjection,float4x4 _InverseRotation,float4x4 _PreviousRotation,float4x4 _Projection)
+            {
+                float4 screenPos = float4(uv*2.0-1.0,1.0,1.0);
+                float4 cameraPos = mul(_InverseProjection,screenPos);
+                cameraPos = cameraPos/cameraPos.w;
+                float3 worldPos = mul((float3x3)_InverseRotation,cameraPos.xyz);
+                float3 preCameraPos = mul((float3x3)_PreviousRotation,worldPos.xyz);
+                float4 pre_clip = mul(_Projection,preCameraPos);
+                pre_clip /= pre_clip.w;
+                pre_clip.xy = pre_clip.xy*0.5+0.5;
+                return float4(pre_clip.xy,0,1);
+            }
+
+            half4 FragBlendPreFrame(Varyings input) : SV_Target{
+                float4 ndcPos = (input.screenPos / input.screenPos.w);
+                float4 cloudCol;
+                
+                #ifndef  FRAME_DIVIDE
+                    cloudCol = SAMPLE_TEXTURE2D(_CloudTex, sampler_CloudTex,ndcPos.xy);
+                    return cloudCol;
+                #endif
+
+                
+
+                int frameOrder = GetIndex(ndcPos.xy, _TargetWidth, _TargetHeight, _FrameIterationCount);
+
+                // return float4(pre_clip.xy,0,0);                
+                // return float4(abs(pre_clip.xy- ndcPos.xy),0,0);
+
+                
+                //判断当帧是否渲染该片元
+                if (frameOrder == _FrameCount)
+                {
+                    cloudCol = SAMPLE_TEXTURE2D(_CloudTex, sampler_CloudTex,ndcPos.xy);
+                    return cloudCol;
+                }
+
+                
+                float4 pre_clip = GetPreClipFun(ndcPos.xy,_InverseProjection,_InverseRotation,_PreviousRotation,_Projection);
+                // return float4(pre_clip.xy,0,1);
+                if(pre_clip.y<0.0 || pre_clip.y>1.0 ||
+                    pre_clip.x <0.0 || pre_clip.y >1.0)
+                {
+                    cloudCol = SAMPLE_TEXTURE2D(_CloudTex, sampler_CloudTex,ndcPos.xy); 
+                }else
+                {
+                    cloudCol = SAMPLE_TEXTURE2D(_PreTex, sampler_PreTex,pre_clip.xy);
+                    // if(_TotalFrameCount > 15){
+                    //     float2  offs = 0.5/float2(_TargetWidth,_TargetHeight);
+                    //     float4 s1 = SAMPLE_TEXTURE2D(_CloudTex, sampler_CloudTex,ndcPos.xy+offs*float2(-1,-1));
+                    //     float4 s2 = SAMPLE_TEXTURE2D(_CloudTex, sampler_CloudTex,ndcPos.xy+offs*float2(1,1));
+                    //     float4 smin = min(s1,s2);
+                    //     float4 smax = max(s1,s2);
+                    //     cloudCol = clamp(cloudCol,smin,smax);
+                    // }
+                    // return 0;
+                }
+                return cloudCol;
+            }
+    
             
     ENDHLSL
     
@@ -275,6 +341,16 @@ Shader "Shader/RayMarchCloud"
             HLSLPROGRAM
             #pragma vertex FullscreenVert
             #pragma fragment FragBlend           
+            ENDHLSL
+        }
+        
+        Pass
+        {        
+            Blend One Zero
+    
+            HLSLPROGRAM
+            #pragma vertex FullscreenVert
+            #pragma fragment FragBlendPreFrame           
             ENDHLSL
         }
     }

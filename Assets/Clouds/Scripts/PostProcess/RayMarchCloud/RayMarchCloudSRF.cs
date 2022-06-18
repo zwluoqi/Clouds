@@ -28,8 +28,10 @@ public class RayMarchCloudSRF : ScriptableRendererFeature
 
         public class CameraFrameData
         {
-            public RenderTexture cloudTex;
-            public Matrix4x4 previousView2WorldMat;
+            public RenderTexture subTex;
+            public RenderTexture[] buffTexs = new RenderTexture[2];
+            public int curIndex;
+            public Matrix4x4 previousRotation;
             public int frameCount = 0;
         }
         public RayMarchCloudPass()
@@ -107,20 +109,26 @@ public class RayMarchCloudSRF : ScriptableRendererFeature
 
             _CloudData.frameCount++;
             var soruce = _renderTargetIdentifier;
-            bool newRt = EnsureRenderTarget(ref _CloudData.cloudTex, w / 2, h / 2, RenderTextureFormat.ARGB32, FilterMode.Point);
-            if (newRt)
+            bool newRt = EnsureRenderTarget(ref _CloudData.buffTexs[0], w / 2, h / 2, RenderTextureFormat.ARGB32, FilterMode.Bilinear);
+            bool newRt2 = EnsureRenderTarget(ref _CloudData.buffTexs[1], w / 2, h / 2, RenderTextureFormat.ARGB32, FilterMode.Bilinear);
+            bool newRt3 = EnsureRenderTarget(ref _CloudData.subTex, w / 2, h / 2, RenderTextureFormat.ARGB32, FilterMode.Bilinear);
+            if (newRt || newRt2 || newRt3)
             {
-                Matrix4x4 initWorldToCameraMatrix = Matrix4x4.Scale(new Vector3(1.0f, 1.0f, -1.0f)) * renderingData.cameraData.GetViewMatrix();
-                _CloudData.previousView2WorldMat = initWorldToCameraMatrix.inverse;//Matrix4x4.Inverse();
+                // Matrix4x4 initWorldToCameraMatrix = Matrix4x4.Scale(new Vector3(1.0f, 1.0f, -1.0f)) * renderingData.cameraData.GetViewMatrix();
+                // _CloudData.previousView2WorldMat = initWorldToCameraMatrix.inverse;//Matrix4x4.Inverse();
+                _CloudData.previousRotation = renderingData.cameraData.camera.nonJitteredProjectionMatrix;
             }
-            cmd.GetTemporaryRT(TmpTexId2,w,h,0,FilterMode.Point, RenderTextureFormat.ARGB32);
-            
+            // cmd.GetTemporaryRT(TmpTexId2,w,h,0,FilterMode.Bilinear, RenderTextureFormat.ARGB32);
+
+            var projection = renderingData.cameraData.camera.nonJitteredProjectionMatrix;
+            var rotation = renderingData.cameraData.camera.worldToCameraMatrix;
+            var inverseRotation = renderingData.cameraData.camera.cameraToWorldMatrix;
             for (int i = 0; i < cloudBoxes.Length; i++)
             {
                 var box = cloudBoxes[i];
                 if (!box.enabled)
                 {
-                    return;
+                    continue;
                 }
                 var transform = box.transform;
                 Vector3 boxcenter = transform.position;
@@ -174,6 +182,7 @@ public class RayMarchCloudSRF : ScriptableRendererFeature
 
                 if (box._DebugFrameCount != 0)
                 {
+                    
                     cmd.SetGlobalInt("_FrameCount", box._DebugFrameCount-1);
                 }
                 else
@@ -181,11 +190,17 @@ public class RayMarchCloudSRF : ScriptableRendererFeature
                     var f = _CloudData.frameCount % 16;
                     cmd.SetGlobalInt("_FrameCount", f);
                 }
-
+                cmd.SetGlobalInt("_TotalFrameCount", _CloudData.frameCount);
+                
                 cmd.SetGlobalInt("_FrameIterationCount", box.FrameIterationMode == 0 ? 2 : 4);
                 cmd.SetGlobalInt("_TargetWidth",w/2);
                 cmd.SetGlobalInt("_TargetHeight",h/2);
-                cmd.SetGlobalMatrix("PRE_UNITY_MATRIX_I_V",_CloudData.previousView2WorldMat);
+                // cmd.SetGlobalMatrix("PRE_UNITY_MATRIX_I_V",_CloudData.previousView2WorldMat);
+                
+                cmd.SetGlobalMatrix("_InverseProjection",projection.inverse);
+                cmd.SetGlobalMatrix("_InverseRotation",inverseRotation);
+                cmd.SetGlobalMatrix("_PreviousRotation",_CloudData.previousRotation);
+                cmd.SetGlobalMatrix("_Projection",projection);
         
                 cmd.SetGlobalFloat("debug_shape_z",box.debug_shape_z);
                 cmd.SetGlobalInt("debug_rgba",(int)box.debug_rgba);
@@ -240,23 +255,31 @@ public class RayMarchCloudSRF : ScriptableRendererFeature
                     cmd.SetGlobalVector("sphereCenter", boxcenter);
                 }
 
-                cmd.SetGlobalTexture("_CloudTex",_CloudData.cloudTex);
-                cmd.Blit(null,_CloudData.cloudTex,_material,0);
-                cmd.SetGlobalTexture(MainTexId,soruce);
-                cmd.SetGlobalTexture("_CloudTex",_CloudData.cloudTex);
-                cmd.Blit(soruce,TmpTexId2,_material,1);
-                cmd.Blit(TmpTexId2, soruce);
+                _CloudData.curIndex ^= 1;
+                //render current
+                cmd.SetGlobalTexture("_MainTex",soruce);
+                cmd.Blit(null,_CloudData.subTex,_material,0);
+
+                
+                //combine pre
+                cmd.SetGlobalTexture("_CloudTex",_CloudData.subTex);
+                cmd.SetGlobalTexture("_PreTex",_CloudData.buffTexs[_CloudData.curIndex^1]);
+                cmd.Blit(null,_CloudData.buffTexs[_CloudData.curIndex],_material,2);
+                
+                //copy
+                cmd.Blit(_CloudData.buffTexs[_CloudData.curIndex], soruce);
             }
             
-            cmd.ReleaseTemporaryRT(TmpTexId2);
+            // cmd.ReleaseTemporaryRT(TmpTexId2);
             
             context.ExecuteCommandBuffer(cmd);
 
             CommandBufferPool.Release(cmd);
 
             // previousView2WorldMat = renderingData.cameraData.camera.cameraToWorldMatrix;
-            Matrix4x4 worldToCameraMatrix = Matrix4x4.Scale(new Vector3(1.0f, 1.0f, -1.0f)) * renderingData.cameraData.GetViewMatrix();
-            _CloudData.previousView2WorldMat = worldToCameraMatrix.inverse;//Matrix4x4.Inverse();
+            // Matrix4x4 worldToCameraMatrix = Matrix4x4.Scale(new Vector3(1.0f, 1.0f, -1.0f)) * renderingData.cameraData.GetViewMatrix();
+            // _CloudData.previousView2WorldMat = worldToCameraMatrix.inverse;//Matrix4x4.Inverse();
+            _CloudData.previousRotation = rotation;
         }
 
         private void EnableDebugShapeKeyWord(CommandBuffer cmd, string debugShapeNose)
