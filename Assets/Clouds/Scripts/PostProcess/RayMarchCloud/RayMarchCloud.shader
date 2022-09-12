@@ -293,7 +293,7 @@ Shader "Shader/RayMarchCloud"
                 float4 pre_clip = GetPreClipFun(ndcPos.xy,_InverseProjection,_InverseRotation,_PreviousRotation,_Projection);
                 // return float4(pre_clip.xy,0,1);
                 if(pre_clip.y<0.0 || pre_clip.y>1.0 ||
-                    pre_clip.x <0.0 || pre_clip.y >1.0)
+                    pre_clip.x <0.0 || pre_clip.x >1.0)
                 {
                     cloudCol = SAMPLE_TEXTURE2D(_CloudTex, sampler_CloudTex,ndcPos.xy); 
                 }else
